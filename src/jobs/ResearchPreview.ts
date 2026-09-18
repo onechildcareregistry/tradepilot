@@ -2,6 +2,7 @@ import type { TradingBrain, BrainRun } from '../brain/TradingBrain.js';
 import { validatePlan } from '../brain/validation.js';
 import type { Clock } from '../domain/Clock.js';
 import type { Session } from '../domain/models.js';
+import type { Candidate, TradingPlan, WatchlistCandidate } from '../domain/models.js';
 import type { ListingDirectory } from '../market-data/ListingDirectory.js';
 
 export async function researchPreview(
@@ -37,6 +38,26 @@ export async function researchPreview(
   return run;
 }
 
+function unknown(value: string | number | null): string {
+  return value === null ? 'Unknown' : String(value);
+}
+function sources(candidate: Candidate | WatchlistCandidate): string {
+  return candidate.sources
+    .map(
+      (source, index) =>
+        `  ${index + 1}. ${source.title}\n     URL: ${source.url}\n     Published: ${unknown(source.publishedAt)} · Retrieved: ${source.retrievedAt} · Cutoff verified: ${source.cutoffVerified}\n     Evidence: ${source.excerpt}`,
+    )
+    .join('\n');
+}
+function candidateRecord(candidate: Candidate): string {
+  return `${candidate.rank}. ${candidate.symbol} — Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nCompany: ${candidate.company} · ${candidate.exchange} · ${candidate.securityType}\nCatalyst: ${candidate.catalyst}\nCatalyst significance: ${candidate.catalystSignificance}\nPremarket: price ${unknown(candidate.premarket.price)}; change ${unknown(candidate.premarket.changePercent)}%; volume ${unknown(candidate.premarket.volume)}; exhaustion score ${unknown(candidate.premarket.exhaustionScore)}/100\nMarket cap: ${unknown(candidate.marketCap)} · Float shares: ${unknown(candidate.floatShares)}\nSetup: ${candidate.setupType}\nBrain trigger ${candidate.triggerPrice}; structural invalidation: ${candidate.stopConcept}; suggested target ${candidate.initialTarget}; maximum allocation ${(candidate.maximumAllocation * 100).toFixed(0)}%\nReasoning: ${candidate.reasoning}\nConfidence: ${(candidate.confidence * 100).toFixed(0)}%\nUncertainties:\n${candidate.uncertainties.map((item) => `  - ${item}`).join('\n')}\nSources:\n${sources(candidate)}`;
+}
+function watchlistRecord(candidate: WatchlistCandidate): string {
+  return `${candidate.rank}. ${candidate.symbol}: Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nCompany: ${candidate.company} · ${candidate.exchange} · ${candidate.securityType}\nWhy tracked: ${candidate.watchReason}\nCatalyst: ${candidate.catalyst}\nCatalyst significance: ${candidate.catalystSignificance}\nPremarket: price ${unknown(candidate.premarket.price)}; change ${unknown(candidate.premarket.changePercent)}%; volume ${unknown(candidate.premarket.volume)}; exhaustion score ${unknown(candidate.premarket.exhaustionScore)}/100\nMarket cap: ${unknown(candidate.marketCap)} · Float shares: ${unknown(candidate.floatShares)}\nSetup considered: ${candidate.setupType}\nReasoning: ${candidate.reasoning}\nConfidence: ${(candidate.confidence * 100).toFixed(0)}%\nUncertainties:\n${candidate.uncertainties.map((item) => `  - ${item}`).join('\n')}\nSources:\n${sources(candidate)}`;
+}
+export function planEmailText(plan: TradingPlan, usageText: string): string {
+  return `Market regime: ${plan.marketRegime}\nMarket regime score: ${plan.marketRegimeScore}/100\nCutoff: ${plan.cutoffAt}\nPlan expires: ${plan.expiresAt}\n\nRecommended for simulated trading today:\n${plan.candidates.map(candidateRecord).join('\n\n')}${plan.watchlist.length ? `\n\nOthers considered (${plan.watchlist.length}; tracked only, never traded):\n${plan.watchlist.map(watchlistRecord).join('\n\n')}` : ''}\n\nBrain: ${plan.brainVersion} · Prompt: ${plan.promptVersion} · Model: ${plan.model}\nUsage: ${usageText}.`;
+}
 export function previewEmailText(run: BrainRun, date: string): string {
   const usage = run.usage;
   const usageText =
@@ -46,17 +67,5 @@ export function previewEmailText(run: BrainRun, date: string): string {
   const header = `RESEARCH PREVIEW ONLY — ${date}\nThis was generated before the official 06:15 America/Vancouver cutoff. It is not an approved trading plan, cannot enable execution, and must not be used for orders.\n`;
   if (!run.plan)
     return `${header}\nNo validated preview was produced.\nValidation: ${run.validationErrors.join('; ') || 'unknown failure'}`;
-  return (
-    `${header}\nMarket regime: ${run.plan.marketRegime}\nMarket regime score: ${run.plan.marketRegimeScore}/100\n\nCandidate review:\n` +
-    run.plan.candidates
-      .map(
-        (candidate) =>
-          `${candidate.rank}. ${candidate.symbol} — Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nCatalyst: ${candidate.catalyst}\nPreview trigger: ${candidate.triggerPrice}; invalidation: ${candidate.stopConcept}; suggested target: ${candidate.initialTarget}\nSources: ${candidate.sources.map((source) => source.url).join(', ')}`,
-      )
-      .join('\n\n') +
-      (run.plan.watchlist.length
-        ? `\n\nEvaluation watchlist (${run.plan.watchlist.length}; tracked only):\n${run.plan.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol}: Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nWhy tracked: ${candidate.watchReason}\nCatalyst: ${candidate.catalyst}`).join('\n\n')}`
-        : '') +
-      `\n\nBrain: ${run.plan.brainVersion} · Model: ${run.plan.model}\nUsage: ${usageText}.`
-  );
+  return `${header}\n${planEmailText(run.plan, usageText)}`;
 }

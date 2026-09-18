@@ -19,6 +19,8 @@ interface EmailCandidate {
   quality: string;
   catalyst: string;
   trigger: string | null;
+  invalidation: string | null;
+  suggestedTarget: string | null;
   note: string | null;
 }
 function candidates(text: string): EmailCandidate[] {
@@ -36,6 +38,8 @@ function candidates(text: string): EmailCandidate[] {
       quality: heading[4] ?? '',
       catalyst: details.match(/Catalyst: ([^\n]+)/)?.[1] ?? 'No catalyst summary recorded.',
       trigger: details.match(/(?:Brain|Preview) trigger: ([^;\n]+)/)?.[1] ?? null,
+      invalidation: details.match(/invalidation: ([^;\n]+)/)?.[1] ?? null,
+      suggestedTarget: details.match(/suggested target:?\s*([^;\n]+)/)?.[1] ?? null,
       note: details.match(/Why tracked: ([^\n]+)/)?.[1] ?? null,
     };
   });
@@ -45,25 +49,30 @@ function reportData(text: string) {
     /^Current simulated portfolio value: USD ([^\n]+)\nCash: USD ([^\n]+)\nOpen positions: ([^\n]+)\nAs of: ([^\n]+)\n\n([\s\S]*)$/,
   );
   const body = match?.[5] ?? text,
-    [primary = '', watch = ''] = body.split(/Evaluation watchlist[^\n]*:\n/);
+    [primary = '', watch = ''] = body.split(/(?:Evaluation watchlist|Others considered)[^\n]*:\n/);
   return {
     portfolioValue: match?.[1] ?? 'Unavailable',
     cash: match?.[2] ?? 'Unavailable', positions: match?.[3] ?? 'None', reportedAt: match?.[4] ?? 'Unavailable',
     regime: body.match(/(?:Market )?[Rr]egime: ([^\n]+)/)?.[1] ?? null,
     regimeScore: body.match(/Market regime score: (\d+)\/100/)?.[1] ?? null,
-    brain: body.match(/Brain: ([^\n·]+) · Model: ([^\n]+)/),
+    brain: body.match(/Brain: ([^\n·]+)(?: · Prompt: [^\n·]+)? · Model: ([^\n]+)/),
     usage: body.match(/Usage: ([^\n]+)/)?.[1] ?? null,
+    fullRecord: body,
     recommendations: candidates(primary).filter((candidate) => Number(candidate.rank) <= 3),
     watchlist: candidates(watch),
   };
 }
-function candidateHtml(candidate: EmailCandidate, primary: boolean): string {
-  return `<section style="margin-top:12px;padding:${primary ? '22px' : '15px'};background:${primary ? '#ffffff' : '#f4f6f9'};border:${primary ? '1px solid #cdd8e5' : '0'};border-radius:6px">
-    <div style="font-size:${primary ? '24px' : '15px'};font-weight:700;color:${primary ? '#172238' : '#536174'}">${escapeHtml(candidate.symbol)} <span style="font-size:12px;color:#168060">Rank ${escapeHtml(candidate.rank)} · Explosion ${escapeHtml(candidate.explosion)}/100 · Entry quality ${escapeHtml(candidate.quality)}/100</span></div>
-    <div style="margin-top:9px;color:#405068;font-size:${primary ? '15px' : '12px'};line-height:1.55"><b>Catalyst:</b> ${escapeHtml(candidate.catalyst)}</div>
-    ${candidate.trigger ? `<div style="margin-top:9px;font-size:12px;color:#607087"><b>Proposed trigger:</b> USD ${escapeHtml(candidate.trigger)} · Requires opening-range confirmation and risk approval</div>` : ''}
-    ${candidate.note ? `<div style="margin-top:8px;font-size:12px;color:#718096"><b>Why tracked:</b> ${escapeHtml(candidate.note)}</div>` : ''}
+function recommendationHtml(candidate: EmailCandidate): string {
+  const lead = candidate.rank === '1';
+  return `<section style="margin-top:12px;padding:${lead ? '22px' : '17px 20px'};background:#ffffff;border:1px solid ${lead ? '#93b7ab' : '#d7e0e9'};border-left:5px solid ${lead ? '#168060' : '#536f95'};border-radius:6px">
+    <div style="font-size:${lead ? '25px' : '19px'};font-weight:700;color:#172238"><span style="display:inline-block;margin-right:9px;padding:3px 7px;background:${lead ? '#168060' : '#536f95'};color:#ffffff;border-radius:3px;font-size:12px;vertical-align:middle">#${escapeHtml(candidate.rank)}</span>${escapeHtml(candidate.symbol)}</div>
+    <div style="margin-top:9px;font-size:12px;font-weight:700;color:#168060">RECOMMENDED SETUP · Explosion ${escapeHtml(candidate.explosion)}/100 · Entry quality ${escapeHtml(candidate.quality)}/100</div>
+    <div style="margin-top:9px;color:#405068;font-size:${lead ? '15px' : '14px'};line-height:1.55"><b>Catalyst:</b> ${escapeHtml(candidate.catalyst)}</div>
+    ${candidate.trigger ? `<div style="margin-top:13px;padding:12px;background:#f4f6f9;border-radius:4px;font-size:12px;line-height:1.55;color:#536174"><div style="font-size:10px;font-weight:700;letter-spacing:.4px;color:#718096;text-transform:uppercase">Brain research reference</div><div style="margin-top:5px"><b>Proposed trigger:</b> USD ${escapeHtml(candidate.trigger)}</div>${candidate.invalidation ? `<div><b>Structural invalidation:</b> ${escapeHtml(candidate.invalidation)}</div>` : ''}${candidate.suggestedTarget ? `<div><b>Suggested target:</b> USD ${escapeHtml(candidate.suggestedTarget)}</div>` : ''}</div><div style="margin-top:9px;font-size:11px;color:#718096">Execution independently requires opening-range confirmation and risk approval. The simulation uses the opening-range low as its stop and a 2R target.</div>` : ''}
   </section>`;
+}
+function consideredHtml(candidate: EmailCandidate, position: number): string {
+  return `<div style="margin-top:8px;padding:10px 0;border-top:1px solid #e2e7ed;color:#718096;font-size:12px;line-height:1.45"><b style="color:#536174">${position}. ${escapeHtml(candidate.symbol)}</b> <span>· considered, not recommended · Explosion ${escapeHtml(candidate.explosion)}/100 · Entry quality ${escapeHtml(candidate.quality)}/100</span><br><span>${escapeHtml(candidate.note ?? candidate.catalyst)}</span></div>`;
 }
 
 function emailHtml(item: OutboxItem): string {
@@ -83,9 +92,12 @@ function emailHtml(item: OutboxItem): string {
       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:16px;background:#f4f6f9">
         <tr><td style="padding:20px 22px;width:50%;vertical-align:top"><div style="font-size:14px;color:#65748a">Portfolio value</div><div style="margin-top:7px;font-size:27px;font-weight:700;color:#182235">USD ${escapeHtml(report.portfolioValue)}</div><div style="margin-top:8px;font-size:12px;color:#607087">Cash USD ${escapeHtml(report.cash)} · Open positions: ${escapeHtml(report.positions)}</div></td><td style="padding:20px 22px;vertical-align:top"><div style="font-size:14px;color:#65748a">Market conditions</div><div style="margin-top:8px;font-size:16px;font-weight:700;line-height:1.4;color:#182235">${escapeHtml(report.regime ?? 'Not recorded')}</div><div style="margin-top:7px;font-size:12px;color:#168060">${report.regimeScore ? `Regime confidence ${escapeHtml(report.regimeScore)}/100` : 'Regime confidence unavailable'}</div></td></tr>
       </table>
-      <div style="margin-top:32px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6e7d92">Primary recommendations</div>
-      <div style="margin-top:10px">${report.recommendations.length ? report.recommendations.map((candidate) => candidateHtml(candidate, true)).join('') : '<p style="color:#607087">No validated execution candidate.</p>'}</div>
-      ${report.watchlist.length ? `<div style="margin-top:30px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7b8798">Evaluation watchlist · tracked only, never traded</div>${report.watchlist.map((candidate) => candidateHtml(candidate, false)).join('')}` : ''}
+      <div style="margin-top:32px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#168060">Recommended for simulated trading today</div>
+      <div style="margin-top:7px;font-size:13px;color:#536174">Only the ranked setups below can be evaluated for mock entries. They remain subject to market data, strategy, and risk checks.</div>
+      <div style="margin-top:10px">${report.recommendations.length ? report.recommendations.map(recommendationHtml).join('') : '<p style="color:#607087">No validated execution candidate.</p>'}</div>
+      ${report.watchlist.length ? `<div style="margin-top:32px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#8b96a5">Others considered · tracked for evaluation only</div><div style="margin-top:3px;font-size:11px;color:#8b96a5">These symbols are never submitted for simulated trading from this report.</div>${report.watchlist.map((candidate, index) => consideredHtml(candidate, index + 1)).join('')}` : ''}
+      <div style="margin-top:32px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6e7d92">Complete structured research record</div>
+      <div style="margin-top:9px;padding:14px;background:#f8fafc;border:1px solid #e2e7ed;color:#536174;font-family:Menlo,Consolas,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word">${escapeHtml(report.fullRecord)}</div>
     </section>
     <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55"><div><b>Brain:</b> ${report.brain ? `${escapeHtml(report.brain[1] ?? 'unavailable')} · <b>Model:</b> ${escapeHtml(report.brain[2] ?? 'unavailable')}` : 'Unavailable'}</div>${report.usage ? `<div style="margin-top:5px"><b>Usage:</b> ${escapeHtml(report.usage)}</div>` : ''}<div style="margin-top:10px">Simulation only. This report is not investment advice and does not establish profitability.</div></footer>
   </main>

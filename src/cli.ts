@@ -16,6 +16,8 @@ import { FinnhubMarketDataProvider } from './market-data/FinnhubMarketDataProvid
 import { NasdaqListingDirectory } from './market-data/ListingDirectory.js';
 import { HttpClient } from './market-data/HttpClient.js';
 import { OpenAiTradingBrain, azureResponsesApi } from './brain/OpenAiTradingBrain.js';
+import type { BrainRun } from './brain/TradingBrain.js';
+import { planSchema } from './domain/models.js';
 import { MorningResearchJob } from './jobs/MorningResearchJob.js';
 import { previewEmailText, researchPreview } from './jobs/ResearchPreview.js';
 import {
@@ -23,6 +25,11 @@ import {
   flushNotifications,
 } from './notifications/NotificationService.js';
 import { TradingWorker } from './worker/TradingWorker.js';
+function isValidBrainRun(value: unknown): value is BrainRun {
+  if (typeof value !== 'object' || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return record.validationStatus === 'valid' && planSchema.safeParse(record.plan).success;
+}
 async function main(): Promise<void> {
   assertTimezoneData();
   const c = loadConfig(),
@@ -186,14 +193,15 @@ async function main(): Promise<void> {
       );
     } else if (command === 'resend-last-preview') {
       if (!notifications) throw new Error('Resend notification configuration is required');
-      const previous = (await repo.read()).outbox
-        .filter((item) => item.id.startsWith('research-preview:'))
+      const run = (await repo.records('BrainRun'))
+        .map((record) => record.payload)
+        .filter(isValidBrainRun)
         .at(-1);
-      if (!previous) throw new Error('No prior research preview email exists');
+      if (!run || !run.plan) throw new Error('No prior validated research preview exists');
       const item = {
         id: `research-preview-resend:${randomUUID()}`,
-        subject: `TradePilot TEST resend — ${previous.subject.replace(/^TradePilot TEST — /, '')}`,
-        text: previous.text,
+        subject: `TradePilot TEST resend — research preview for ${run.plan.tradingDate}`,
+        text: previewEmailText(run, run.plan.tradingDate),
         sentAt: null,
         attempts: 0,
       };

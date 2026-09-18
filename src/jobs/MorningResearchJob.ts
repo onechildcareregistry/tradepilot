@@ -5,6 +5,7 @@ import type { Repository } from '../persistence/Repository.js';
 import type { ListingDirectory } from '../market-data/ListingDirectory.js';
 import { portfolio } from '../portfolio/PortfolioService.js';
 import { validatePlan } from '../brain/validation.js';
+import { planEmailText } from './ResearchPreview.js';
 export class MorningResearchJob {
   constructor(
     private brain: TradingBrain,
@@ -73,17 +74,13 @@ export class MorningResearchJob {
           id: `research:${session.date}`,
           subject: `TradePilot research — ${session.date}`,
           text:
-            `SIMULATION ONLY | Starting equity: USD ${portfolio(s, now).equity}\nRegime: ${p.marketRegime}\nMarket regime score: ${p.marketRegimeScore}/100\nStatus: validated plan; execution remains subject to configuration and risk checks.\n` +
-            p.candidates
-              .map(
-                (c) =>
-                  `${c.rank}. ${c.symbol}: Explosion ${c.explosionScore}; Entry quality ${c.entryQuality}\nCatalyst: ${c.catalyst}\nBrain trigger ${c.triggerPrice}; invalidation: ${c.stopConcept}; suggested target ${c.initialTarget}\nExecution: opening-range stop, 2R target. Risks: ${c.uncertainties.join('; ')}\nSources: ${c.sources.map((x) => x.url).join(', ')}`,
-              )
-              .join('\n\n') +
-            (p.watchlist.length
-              ? `\n\nEvaluation watchlist (${p.watchlist.length}; tracked only, never traded):\n${p.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol}: Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nWhy tracked: ${candidate.watchReason}\nCatalyst: ${candidate.catalyst}`).join('\n\n')}`
-              : '') +
-            `\n\nBrain: ${p.brainVersion} · Model: ${p.model}\nUsage: ${usage?.totalTokens === null || usage?.totalTokens === undefined ? 'unavailable' : `${usage.totalTokens} total tokens`} (${usage?.inputTokens ?? 'unknown'} input, ${usage?.outputTokens ?? 'unknown'} output, ${usage?.reasoningTokens ?? 'unknown'} reasoning).`,
+            `SIMULATION ONLY | Starting equity: USD ${portfolio(s, now).equity}\nStatus: validated plan; execution remains subject to configuration and risk checks.\n\n` +
+            planEmailText(
+              p,
+              usage?.totalTokens === null || usage?.totalTokens === undefined
+                ? 'unavailable'
+                : `${usage.totalTokens} total tokens (${usage.inputTokens ?? 'unknown'} input, ${usage.outputTokens ?? 'unknown'} output, ${usage.reasoningTokens ?? 'unknown'} reasoning)`,
+            ),
           sentAt: null,
           attempts: 0,
         });
