@@ -49,6 +49,24 @@ summary:focus-visible {
   font-weight: 400;
   margin-left: 12px;
 }
+.history-charts {
+  display: grid;
+  gap: 20px;
+}
+.history-chart-card {
+  border-top: 1px solid #26363c;
+  padding-top: 16px;
+}
+.history-chart-heading {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.history-chart-heading h3 {
+  margin: 0;
+}
 .history-brief {
   margin-top: 28px;
   padding-top: 24px;

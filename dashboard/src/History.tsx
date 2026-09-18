@@ -76,19 +76,19 @@ export function History({ report }: { report: PublicReport | null }) {
     ...(entry?.candidates.map((c) => c.symbol) ?? []),
     ...(research?.watchlist.map((c) => c.symbol) ?? []),
   ];
-  const selectedSymbol = names.includes(symbol) ? symbol : (names[0] ?? '');
+  const trackedSymbols = [...new Set(names)];
+  const selectedSymbol = trackedSymbols.includes(symbol) ? symbol : (trackedSymbols[0] ?? '');
   const endDate = entry?.date ?? '';
   const fromDate = endDate
     ? new Date(Date.parse(`${endDate}T00:00:00Z`) - (range === 'week' ? 6 : 0) * 86400000)
         .toISOString()
         .slice(0, 10)
     : '';
-  const candles = (report?.priceHistory ?? []).filter(
-    (b) =>
-      b.symbol === selectedSymbol &&
-      b.start.slice(0, 10) >= fromDate &&
-      b.start.slice(0, 10) <= endDate,
-  );
+  const candlesFor = (ticker: string) =>
+    (report?.priceHistory ?? []).filter(
+      (b) =>
+        b.symbol === ticker && b.start.slice(0, 10) >= fromDate && b.start.slice(0, 10) <= endDate,
+    );
   return (
     <section className="panel reports" id="history">
       <div className="panel-heading">
@@ -136,43 +136,64 @@ export function History({ report }: { report: PublicReport | null }) {
           </div>
           <div className="history-summary">
             <h3>
-              {selectedSymbol || 'No ticker'} <span>Observed prices</span>
+              {trackedSymbols.length} tracked ticker{trackedSymbols.length === 1 ? '' : 's'}{' '}
+              <span>Observed prices</span>
             </h3>
             <p className="muted">
-              {candles.length} saved one-minute candles · {fromDate} — {endDate}. Only observed
-              minutes are plotted; gaps are not connected. Prices retained here for 30 days.
+              {report?.status.includes('partial') || report?.status === 'data-unavailable'
+                ? `The selected report has a market-data warning (${report.status}). Only candles successfully received and saved are shown.`
+                : 'Only observed minutes are plotted; gaps are not connected.'}{' '}
+              Prices retained here for 30 days.
             </p>
           </div>
-          <PriceChart candles={candles} symbol={selectedSymbol} />
-          {candles.length > 0 && (
-            <details>
-              <summary>View candle values</summary>
-              <div className="candle-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Minute (ET)</th>
-                      <th>Open</th>
-                      <th>High</th>
-                      <th>Low</th>
-                      <th>Close</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candles.map((b) => (
-                      <tr key={b.start}>
-                        <td>{time(b.start)}</td>
-                        <td>{price(b.open)}</td>
-                        <td>{price(b.high)}</td>
-                        <td>{price(b.low)}</td>
-                        <td>{price(b.close)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          )}
+          <div className="history-charts">
+            {trackedSymbols.map((ticker) => {
+              const tickerCandles = candlesFor(ticker);
+              return (
+                <article className="history-chart-card" key={ticker}>
+                  <div className="history-chart-heading">
+                    <h3>{ticker}</h3>
+                    <span className="muted">
+                      {entry.candidates.some((c) => c.symbol === ticker)
+                        ? 'Primary recommendation'
+                        : 'Others considered · tracked only'}{' '}
+                      · {tickerCandles.length} candles · {fromDate} — {endDate}
+                    </span>
+                  </div>
+                  <PriceChart candles={tickerCandles} symbol={ticker} />
+                  {tickerCandles.length > 0 && (
+                    <details>
+                      <summary>View candle values</summary>
+                      <div className="candle-table">
+                        <table>
+                          <thead>
+                            <tr>
+                              <th>Minute (ET)</th>
+                              <th>Open</th>
+                              <th>High</th>
+                              <th>Low</th>
+                              <th>Close</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {tickerCandles.map((b) => (
+                              <tr key={b.start}>
+                                <td>{time(b.start)}</td>
+                                <td>{price(b.open)}</td>
+                                <td>{price(b.high)}</td>
+                                <td>{price(b.low)}</td>
+                                <td>{price(b.close)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  )}
+                </article>
+              );
+            })}
+          </div>
           <div className="history-brief">
             <span className="eyebrow">REPORT · {entry.date}</span>
             <h3>{entry.marketRegime}</h3>
