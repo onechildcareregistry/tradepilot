@@ -1,0 +1,34 @@
+name: Validate TradePilot
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      sql:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_PID: Developer
+          MSSQL_SA_PASSWORD: TradePilot_Local_Test_42!
+        ports:
+          - 14339:1433
+        options: >-
+          --memory 2g --cpus 2
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'TradePilot_Local_Test_42!' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s --health-start-period 30s --health-retries 12
+    env:
+      SQL_LOCAL_TEST: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm run schema && git diff --exit-code -- src/brain/schemas/TradingPlan.schema.json
+      - run: az bicep build --file infra/main.bicep --stdout > /dev/null
+      - run: docker build -t tradepilot:test .
+      - run: docker run --rm tradepilot:test node dist/cli.js demo

@@ -1,0 +1,7 @@
+node_modules
+dist
+dashboard/dist
+data
+package-lock.json
+dashboard/public/report.json
+src/brain/schemas/TradingPlan.schema.json

@@ -1,0 +1,24 @@
+services:
+  demo:
+    build: .
+    command: ["node", "dist/cli.js", "demo"]
+    environment:
+      TRADEPILOT_MODE: Monopoly
+      TRADING_ENABLED: "false"
+      REPORT_PATH: /app/data/report.json
+    volumes:
+      - tradepilot-data:/app/data
+  worker:
+    build: .
+    profiles: [live-data]
+    command: ["node", "dist/cli.js", "worker"]
+    env_file: .env
+    environment:
+      TRADEPILOT_MODE: Monopoly
+      DATABASE: sqlite
+      SQLITE_PATH: /app/data/tradepilot.db
+      REPORT_PATH: /app/data/report.json
+    volumes:
+      - tradepilot-data:/app/data
+volumes:
+  tradepilot-data:

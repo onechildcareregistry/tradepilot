@@ -1,0 +1,20 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "resourceGroupName": {"value": "rg-tradepilot"},
+    "location": {"value": "canadacentral"},
+    "deployApplications": {"value": false},
+    "image": {"value": "ghcr.io/YOUR-OWNER/tradepilot:IMMUTABLE-COMMIT-SHA"},
+    "sqlAdminObjectId": {"value": "YOUR-ENTRA-USER-OBJECT-ID"},
+    "sqlAdminLogin": {"value": "YOUR-ENTRA-USER-LOGIN"},
+    "alertEmail": {"value": "YOUR-EMAIL"},
+    "azureOpenAiEndpoint": {"value": "https://YOUR-RESOURCE.openai.azure.com"},
+    "azureOpenAiDeployment": {"value": "tradepilot-gpt-5-6-luna"},
+    "tradingEnabled": {"value": false},
+    "dataVerified": {"value": false},
+    "emailFrom": {"value": "YOUR-VERIFIED-RESEND-SENDER"},
+    "emailTo": {"value": "YOUR-EMAIL"},
+    "budgetStartDate": {"value": "2026-09-01T00:00:00Z"}
+  }
+}

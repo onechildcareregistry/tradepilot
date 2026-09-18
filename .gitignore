@@ -1,0 +1,14 @@
+node_modules/
+dist/
+dashboard/dist/
+.env
+.env.*
+!.env.example
+data/
+coverage/
+infra/*.json
+!infra/parameters.example.json
+*.db*
+
+.dashboard-test/
+dashboard/public/report.json

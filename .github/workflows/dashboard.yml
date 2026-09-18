@@ -1,0 +1,32 @@
+name: Publish public dashboard
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Configure public report endpoint
+        env:
+          REPORT_URL: ${{ vars.TRADEPILOT_REPORT_URL }}
+        run: |
+          node --input-type=module <<'JS'
+          import {writeFileSync,rmSync} from 'node:fs';
+          const url=new URL(process.env.REPORT_URL);
+          if(url.protocol!=='https:'||!url.hostname.endsWith('.blob.core.windows.net'))throw new Error('Expected public Azure Blob report URL');
+          writeFileSync('dashboard/public/config.json',JSON.stringify({reportUrl:url.toString()}));
+          rmSync('dashboard/public/report.json',{force:true});
+          JS
+      - run: npm run build
+      - uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: dashboard/dist
+          skip_app_build: true

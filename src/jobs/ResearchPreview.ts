@@ -1,0 +1,54 @@
+import type { TradingBrain, BrainRun } from '../brain/TradingBrain.js';
+import { validatePlan } from '../brain/validation.js';
+import type { Clock } from '../domain/Clock.js';
+import type { Session } from '../domain/models.js';
+import type { ListingDirectory } from '../market-data/ListingDirectory.js';
+
+export async function researchPreview(
+  brain: TradingBrain,
+  listings: ListingDirectory,
+  clock: Clock,
+  session: Session,
+  startingEquity: string,
+): Promise<BrainRun> {
+  const run = await brain.generateTradingPlan({ session, startingEquity });
+  try {
+    if (!run.plan) throw new Error('Research did not produce a plan');
+    const eligible = [];
+    for (const candidate of run.plan.candidates)
+      if (await listings.eligible(candidate.symbol, candidate.exchange)) eligible.push(candidate);
+    run.plan.candidates = eligible.map((candidate, index) => ({ ...candidate, rank: index + 1 }));
+    if (!run.plan.candidates.length)
+      throw new Error('No eligible verified Nasdaq/NYSE common stocks');
+    run.plan = validatePlan(run.plan, session, clock.now().toISOString());
+    run.validationStatus = 'valid';
+  } catch (error) {
+    run.validationStatus = 'invalid';
+    run.validationErrors = [
+      ...run.validationErrors,
+      error instanceof Error ? error.message : 'Preview validation failed',
+    ];
+    run.plan = null;
+  }
+  return run;
+}
+
+export function previewEmailText(run: BrainRun, date: string): string {
+  const usage = run.usage;
+  const usageText =
+    usage?.totalTokens === null || usage?.totalTokens === undefined
+      ? 'unavailable'
+      : `${usage.totalTokens} total tokens (${usage.inputTokens ?? 'unknown'} input, ${usage.outputTokens ?? 'unknown'} output, ${usage.reasoningTokens ?? 'unknown'} reasoning)`;
+  const header = `RESEARCH PREVIEW ONLY — ${date}\nThis was generated before the official 06:15 America/Vancouver cutoff. It is not an approved trading plan, cannot enable execution, and must not be used for orders.\n\nUsage: ${usageText}.\n`;
+  if (!run.plan)
+    return `${header}\nNo validated preview was produced.\nValidation: ${run.validationErrors.join('; ') || 'unknown failure'}`;
+  return (
+    `${header}\nCandidate review:\n` +
+    run.plan.candidates
+      .map(
+        (candidate) =>
+          `${candidate.rank}. ${candidate.symbol} — Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nCatalyst: ${candidate.catalyst}\nPreview trigger: ${candidate.triggerPrice}; invalidation: ${candidate.stopConcept}; suggested target: ${candidate.initialTarget}\nSources: ${candidate.sources.map((source) => source.url).join(', ')}`,
+      )
+      .join('\n\n')
+  );
+}

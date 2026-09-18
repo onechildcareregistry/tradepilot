@@ -1,0 +1,9 @@
+node_modules
+.git
+.env
+.env.*
+data
+dist
+dashboard/dist
+dashboard/public/report.json
+coverage

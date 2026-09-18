@@ -1,0 +1,13 @@
+# Test-only SQL credentials, loopback binding, ephemeral storage; never used by production.
+services:
+  sql-test:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: "TradePilot_Local_Test_42!"
+    ports:
+      - "127.0.0.1:14339:1433"
+    mem_limit: 2g
+    cpus: 2
