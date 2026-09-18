@@ -9,7 +9,11 @@ import { MockBroker } from '../src/broker/MockBroker.js';
 import { OpeningRangeBreakoutStrategy } from '../src/strategy/OpeningRangeBreakoutStrategy.js';
 import { RiskEngine } from '../src/risk/RiskEngine.js';
 import { validatePlan } from '../src/brain/validation.js';
-import { publicReport, publicReportSchema } from '../src/reporting/PublicReport.js';
+import {
+  publicReport,
+  publicReportSchema,
+  persistedPublicReport,
+} from '../src/reporting/PublicReport.js';
 import { D } from '../src/domain/money.js';
 const config = loadConfig({ TRADING_ENABLED: 'true', DATA_VERIFIED: 'true' });
 const calendar = new UsTradingCalendar();
@@ -251,7 +255,7 @@ describe('plans and end-to-end reports', () => {
     expect(first.metrics.tradeCount).toBe(1);
     expect(first.metrics.equity).toBe(5021.5883);
     expect(first.status).toBe('closed');
-    expect(JSON.stringify(first)).not.toMatch(/entryPrice|sources|apiKey/);
+    expect(JSON.stringify(first)).not.toMatch(/entryPrice|apiKey/);
     expect(first.reportHistory[0]?.candidates[0]?.symbol).toBe('DEMO');
     expect(() => publicReportSchema.parse({ ...first, quotes: [] })).toThrow();
     const state = await a.read();
@@ -262,13 +266,55 @@ describe('plans and end-to-end reports', () => {
     await new TradingEngine(repo, config).process({ type: 'clock', at: session().close });
     expect(Object.keys((await repo.read()).positions)).toEqual(['DEMO']);
   });
-  it('exposes approved report summaries without evidence or execution prices', () => {
+  it('exposes authorized research history without credentials or execution prices', () => {
     const s = opened();
     const r = publicReport(s, at);
     expect(Object.keys(r)).not.toContain('plans');
-    expect(JSON.stringify(r)).not.toContain('triggerPrice');
-    expect(JSON.stringify(r)).not.toContain('sources');
+    expect(r.reportHistory[0]?.research).toEqual(s.plans[session().date]);
+    expect(JSON.stringify(r)).not.toMatch(/entryPrice|apiKey/);
     expect(r.reportHistory).toHaveLength(1);
+  });
+  it('publishes persisted candles across days while excluding quotes and expired observations', async () => {
+    const repo = new MemoryRepository(opened());
+    await repo.transact((s, audit) => {
+      s.bars = {};
+      for (const start of [
+        '2026-09-16T13:30:00.000Z',
+        '2026-09-17T13:30:00.000Z',
+        '2026-08-01T13:30:00.000Z',
+      ]) {
+        const b = bar(start);
+        audit.push({
+          entity: 'MarketDataSnapshot',
+          id: start,
+          at: b.receivedAt,
+          payload: { type: 'bar', bar: b },
+        });
+      }
+      audit.push({
+        entity: 'MarketDataSnapshot',
+        id: 'private-quote',
+        at,
+        payload: { type: 'quote', quote: quote(at) },
+      });
+    });
+    const report = await persistedPublicReport(repo, '2026-09-18T19:00:00.000Z');
+    expect(report.priceHistory.map((b) => b.start.slice(0, 10))).toEqual([
+      '2026-09-16',
+      '2026-09-17',
+    ]);
+    expect(Object.keys(report.priceHistory[0] ?? {})).toEqual([
+      'symbol',
+      'start',
+      'end',
+      'open',
+      'high',
+      'low',
+      'close',
+    ]);
+    expect(publicReportSchema.parse({ ...report, priceHistory: undefined }).priceHistory).toEqual(
+      [],
+    );
   });
   it('tracks watchlist candidates without allowing them to create entry signals', async () => {
     const s = opened();

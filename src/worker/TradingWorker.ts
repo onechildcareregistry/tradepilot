@@ -8,7 +8,7 @@ import type { Repository } from '../persistence/Repository.js';
 import type { ReportPublisher } from '../reporting/ReportPublisher.js';
 import type { NotificationService } from '../notifications/NotificationService.js';
 import { flushNotifications } from '../notifications/NotificationService.js';
-import { publicReport } from '../reporting/PublicReport.js';
+import { persistedPublicReport } from '../reporting/PublicReport.js';
 import { TradingEngine } from './TradingEngine.js';
 export class TradingWorker {
   private stop = false;
@@ -49,7 +49,7 @@ export class TradingWorker {
           if (closedDate !== session.date) {
             this.data.close?.();
             await engine.process({ type: 'clock', at });
-            await this.publisher.publish(publicReport(await this.repo.read(), at));
+            await this.publisher.publish(await persistedPublicReport(this.repo, at));
             if (this.notifications)
               await flushNotifications(this.repo, this.notifications, () =>
                 this.clock.now().toISOString(),
@@ -175,7 +175,7 @@ export class TradingWorker {
         await engine.process({ type: 'clock', at: this.clock.now().toISOString() });
         state = await this.repo.read();
         if (now.getTime() - lastReport >= 300000) {
-          await this.publisher.publish(publicReport(state, at));
+          await this.publisher.publish(await persistedPublicReport(this.repo, at));
           lastReport = now.getTime();
           if (this.notifications)
             await flushNotifications(this.repo, this.notifications, () =>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { publicReportSchema, type PublicReport } from '../../src/reporting/PublicReport.js';
 import './style.css';
+import { History } from './History.js';
 const usd = (n: number) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -113,8 +114,8 @@ function App() {
         <a className="nav" href="#performance">
           <span>⌁</span> Performance
         </a>
-        <a className="nav" href="#reports">
-          <span>▤</span> Reports
+        <a className="nav" href="#history">
+          <span>▤</span> History
         </a>
         <a className="nav" href="#method">
           <span>ⓘ</span> Method & coverage
@@ -285,13 +286,14 @@ function App() {
             </div>
           </article>
         </section>
+        <History report={report} />
         <section className="panel reports" id="reports">
           <div className="panel-heading">
             <div>
               <span className="eyebrow">DAILY RESEARCH</span>
               <h2>Report history</h2>
             </div>
-            <span className="legend">Approved reports · latest 30</span>
+            <span className="legend">Approved reports</span>
           </div>
           {report?.reportHistory.length ? (
             <div className="report-list">

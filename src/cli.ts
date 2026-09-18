@@ -9,7 +9,7 @@ import { SqliteRepository } from './persistence/SqliteRepository.js';
 import { AzureSqlRepository } from './persistence/AzureSqlRepository.js';
 import type { Repository } from './persistence/Repository.js';
 import { runDemo } from './demo.js';
-import { publicReport } from './reporting/PublicReport.js';
+import { publicReport, persistedPublicReport } from './reporting/PublicReport.js';
 import { performance } from './reporting/PerformanceService.js';
 import { LocalReportPublisher, AzureReportPublisher } from './reporting/ReportPublisher.js';
 import { FinnhubMarketDataProvider } from './market-data/FinnhubMarketDataProvider.js';
@@ -130,7 +130,12 @@ async function main(): Promise<void> {
       if (!result.ok) process.exitCode = 1;
     } else if (command === 'research' || command === 'research-recover') {
       if (!session) return;
-      const result = await new MorningResearchJob(brain(), repo, clock, new NasdaqListingDirectory()).run(session, command === 'research-recover');
+      const result = await new MorningResearchJob(
+        brain(),
+        repo,
+        clock,
+        new NasdaqListingDirectory(),
+      ).run(session, command === 'research-recover');
       console.log(result);
       if (notifications)
         await flushNotifications(repo, notifications, () => clock.now().toISOString());
@@ -150,7 +155,11 @@ async function main(): Promise<void> {
           audit.push({ entity: 'BrainRun', id: run.id, at: run.generatedAt, payload: run });
         });
         console.log(
-          JSON.stringify({ status: run.validationStatus, previewDate: preview.date, usage: run.usage }),
+          JSON.stringify({
+            status: run.validationStatus,
+            previewDate: preview.date,
+            usage: run.usage,
+          }),
         );
         return;
       }
@@ -210,7 +219,7 @@ async function main(): Promise<void> {
       process.once('SIGTERM', () => worker.shutdown());
       await worker.run();
     } else if (command === 'publish')
-      await publisher.publish(publicReport(await repo.read(), clock.now().toISOString()));
+      await publisher.publish(await persistedPublicReport(repo, clock.now().toISOString()));
     else if (command === 'archive') {
       if (!(publisher instanceof AzureReportPublisher))
         throw new Error('Archive requires STORAGE_ACCOUNT');

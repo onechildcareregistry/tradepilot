@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { D } from '../domain/money.js';
 import type { State } from '../domain/models.js';
+import { planSchema } from '../domain/models.js';
+import type { Repository } from '../persistence/Repository.js';
 import { performance } from './PerformanceService.js';
 const num = z.number().finite();
 const group = z
@@ -12,6 +14,7 @@ const reportHistoryItem = z
     generatedAt: z.string().datetime(),
     marketRegime: z.string(),
     marketRegimeScore: num,
+    research: planSchema.optional(),
     candidates: z.array(
       z
         .object({
@@ -57,6 +60,21 @@ export const publicReportSchema = z
     bySetup: z.array(group),
     byRank: z.array(group),
     reportHistory: z.array(reportHistoryItem),
+    priceHistory: z
+      .array(
+        z
+          .object({
+            symbol: z.string(),
+            start: z.string().datetime(),
+            end: z.string().datetime(),
+            open: num.positive(),
+            high: num.positive(),
+            low: num.positive(),
+            close: num.positive(),
+          })
+          .strict(),
+      )
+      .default([]),
   })
   .strict();
 export type PublicReport = z.infer<typeof publicReportSchema>;
@@ -106,12 +124,12 @@ export function publicReport(s: State, at: string, fixture = false): PublicRepor
     byRank: groups(p.byRank),
     reportHistory: Object.values(s.plans)
       .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
-      .slice(0, 30)
       .map((plan) => ({
         date: plan.tradingDate,
         generatedAt: plan.generatedAt,
         marketRegime: plan.marketRegime,
         marketRegimeScore: plan.marketRegimeScore,
+        research: plan,
         candidates: plan.candidates.map((candidate) => ({
           rank: candidate.rank,
           symbol: candidate.symbol,
@@ -122,4 +140,48 @@ export function publicReport(s: State, at: string, fixture = false): PublicRepor
         })),
       })),
   });
+}
+
+/** Explicit public projection: candles only, never decision quotes or operational records. */
+export async function persistedPublicReport(repo: Repository, at: string): Promise<PublicReport> {
+  const state = await repo.read();
+  const report = publicReport(state, at);
+  const cutoff = Date.parse(at) - 30 * 86400000;
+  const eventSchema = z.object({
+    type: z.literal('bar'),
+    bar: z.object({
+      symbol: z.string(),
+      start: z.string().datetime(),
+      end: z.string().datetime(),
+      open: z.string(),
+      high: z.string(),
+      low: z.string(),
+      close: z.string(),
+    }),
+  });
+  const symbols = new Set(
+    Object.values(state.plans).flatMap((p) =>
+      [...p.candidates, ...p.watchlist].map((c) => c.symbol),
+    ),
+  );
+  const unique = new Map<string, PublicReport['priceHistory'][number]>();
+  for (const row of await repo.records('MarketDataSnapshot')) {
+    const parsed = eventSchema.safeParse(row.payload);
+    if (!parsed.success) continue;
+    const b = parsed.data.bar;
+    if (!symbols.has(b.symbol) || Date.parse(b.start) < cutoff || b.end > at) continue;
+    unique.set(`${b.symbol}:${b.start}`, {
+      symbol: b.symbol,
+      start: b.start,
+      end: b.end,
+      open: Number(b.open),
+      high: Number(b.high),
+      low: Number(b.low),
+      close: Number(b.close),
+    });
+  }
+  report.priceHistory = [...unique.values()].sort(
+    (a, b) => a.start.localeCompare(b.start) || a.symbol.localeCompare(b.symbol),
+  );
+  return publicReportSchema.parse(report);
 }

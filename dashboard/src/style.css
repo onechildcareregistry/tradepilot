@@ -11,6 +11,82 @@
   font-synthesis: none;
   font-weight: 400;
 }
+.history-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin: 12px 0 24px;
+}
+.history-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #9db2b8;
+  font-size: 12px;
+  flex: 1;
+  min-width: 180px;
+}
+.history-controls select {
+  padding: 12px;
+  color: #e8eef0;
+  background: #142126;
+  border: 1px solid #34504f;
+  border-radius: 6px;
+  font: inherit;
+  width: 100%;
+}
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #79e6c3;
+  outline-offset: 3px;
+}
+.history-summary h3 {
+  font-size: 22px;
+}
+.history-summary h3 span {
+  font-size: 12px;
+  color: #91a7ae;
+  font-weight: 400;
+  margin-left: 12px;
+}
+.history-brief {
+  margin-top: 28px;
+  padding-top: 24px;
+  border-top: 1px solid #26363c;
+}
+.others-considered {
+  font-size: 11px;
+  color: #91a7ae;
+  margin: 24px 0;
+  line-height: 1.8;
+}
+.others-considered h4 {
+  font-size: 12px;
+}
+.candle-table {
+  overflow: auto;
+  max-height: 300px;
+}
+.candle-table td {
+  padding: 10px 14px 10px 0;
+  white-space: nowrap;
+}
+summary {
+  cursor: pointer;
+  color: #9dd9c6;
+  font-size: 12px;
+  padding: 12px 0;
+}
+.research-record {
+  overflow: auto;
+  max-height: 500px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #0b1216;
+  padding: 18px;
+  font-size: 11px;
+  line-height: 1.6;
+}
 * {
   box-sizing: border-box;
 }
