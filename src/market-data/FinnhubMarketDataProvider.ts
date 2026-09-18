@@ -155,7 +155,8 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
     return quotes.sort((a, b) => a.timestamp.localeCompare(b.timestamp));
   }
   async getBars(symbols: string[], start: string, end: string): Promise<Bar[]> {
-    if (this.health(symbols)) return [];
+    // Return completed candles for symbols that were observed. A stale or missing symbol
+    // must not discard valid candles collected for the other tracked symbols.
     return this.bars.completed(symbols, start, end, this.clock.now().toISOString());
   }
   async verify(symbols: string[]): Promise<{ ok: boolean; issues: string[] }> {

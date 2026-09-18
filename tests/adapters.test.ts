@@ -60,6 +60,18 @@ describe('read-only provider adapters', () => {
       { symbol: 'AAPL', lastPrice: '100.25' },
     ]);
     expect(provider.health?.(['AAPL', 'MSFT'])).toBe('partial-or-stale-data:MSFT');
+    await clock.sleep(30_000);
+    first.emit(
+      'message',
+      JSON.stringify({
+        type: 'trade',
+        data: [{ s: 'AAPL', p: 101, t: Date.parse(at) + 30_000 }],
+      }),
+    );
+    await clock.sleep(30_000);
+    expect(await provider.getBars(['AAPL', 'MSFT'], at, clock.now().toISOString())).toMatchObject([
+      { symbol: 'AAPL', open: '100.25', high: '101', low: '100.25', close: '101' },
+    ]);
     first.emit('close');
     await clock.sleep(1000);
     await expect(provider.getQuotes(['AAPL'])).rejects.toThrow('stream-disconnected');
