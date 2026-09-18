@@ -204,7 +204,16 @@ describe('research and notifications', () => {
                 output: [
                   {
                     type: 'message',
-                    content: [{ type: 'output_text', text: JSON.stringify(plan) }],
+                    content: [
+                      {
+                        type: 'output_text',
+                        text: JSON.stringify({
+                          ...plan,
+                          model: 'model-invented-by-response',
+                          promptVersion: 'prompt-invented-by-response',
+                        }),
+                      },
+                    ],
                   },
                 ],
               },
@@ -217,6 +226,7 @@ describe('research and notifications', () => {
     expect(result.originalResearch).not.toBeNull();
     expect(result.originalOutput).not.toBeNull();
     expect(result.plan?.model).toBe('configured-model');
+    expect(result.plan?.promptVersion).toBe('trading-brain-v0.2');
     expect(result.usage).toEqual({
       requests: 2,
       inputTokens: 180,

@@ -56,6 +56,7 @@ function reportData(text: string) {
     regime: body.match(/(?:Market )?[Rr]egime: ([^\n]+)/)?.[1] ?? null,
     regimeScore: body.match(/Market regime score: (\d+)\/100/)?.[1] ?? null,
     brain: body.match(/Brain: ([^\n·]+)(?: · Prompt: [^\n·]+)? · Model: ([^\n]+)/),
+    promptVersion: body.match(/ · Prompt: ([^\n·]+)/)?.[1]?.trim() ?? 'Unavailable',
     usage: body.match(/Usage: ([^\n]+)/)?.[1] ?? null,
     fullRecord: body,
     recommendations: candidates(primary).filter((candidate) => Number(candidate.rank) <= 3),
@@ -99,7 +100,7 @@ function emailHtml(item: OutboxItem): string {
       <div style="margin-top:32px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6e7d92">Complete structured research record</div>
       <div style="margin-top:9px;padding:14px;background:#f8fafc;border:1px solid #e2e7ed;color:#536174;font-family:Menlo,Consolas,monospace;font-size:11px;line-height:1.5;white-space:pre-wrap;word-break:break-word">${escapeHtml(report.fullRecord)}</div>
     </section>
-    <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55"><div><b>Brain:</b> ${report.brain ? `${escapeHtml(report.brain[1] ?? 'unavailable')} · <b>Model:</b> ${escapeHtml(report.brain[2] ?? 'unavailable')}` : 'Unavailable'}</div>${report.usage ? `<div style="margin-top:5px"><b>Usage:</b> ${escapeHtml(report.usage)}</div>` : ''}<div style="margin-top:10px">Simulation only. This report is not investment advice and does not establish profitability.</div></footer>
+    <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55"><div><b>Brain:</b> ${report.brain ? `${escapeHtml(report.brain[1] ?? 'unavailable')} · <b>Model:</b> ${escapeHtml(report.brain[2] ?? 'unavailable')}` : 'Unavailable'}</div><div><b>Prompt version:</b> ${escapeHtml(report.promptVersion)}</div>${report.usage ? `<div style="margin-top:5px"><b>Usage:</b> ${escapeHtml(report.usage)}</div>` : ''}<div style="margin-top:10px">Simulation only. This report is not investment advice and does not establish profitability.</div></footer>
   </main>
 </body></html>`;
 }

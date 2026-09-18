@@ -7,6 +7,7 @@ import type { Clock } from '../domain/Clock.js';
 import type { TradingBrain, TradingResearchContext, BrainRun } from './TradingBrain.js';
 import { validatePlan } from './validation.js';
 import { HttpClient } from '../market-data/HttpClient.js';
+const PROMPT_VERSION = 'trading-brain-v0.2';
 export interface ResponsesApi {
   endpoint: string;
   headers: Record<string, string>;
@@ -122,11 +123,11 @@ export class OpenAiTradingBrain implements TradingBrain {
   ) {}
   async generateTradingPlan(context: TradingResearchContext): Promise<BrainRun> {
     const startedAt = this.clock.now().toISOString(),
-      prompt = await readFile(new URL('./prompts/trading-brain-v0.2.md', import.meta.url), 'utf8');
+      prompt = await readFile(new URL(`./prompts/${PROMPT_VERSION}.md`, import.meta.url), 'utf8');
     const run: BrainRun = {
       id: randomUUID(),
       model: this.model,
-      promptVersion: 'trading-brain-v0.2',
+      promptVersion: PROMPT_VERSION,
       promptHash: createHash('sha256').update(prompt).digest('hex'),
       startedAt,
       generatedAt: startedAt,
@@ -206,7 +207,16 @@ export class OpenAiTradingBrain implements TradingBrain {
         store: false,
       });
       run.generatedAt = this.clock.now().toISOString();
-      const parsed = planSchema.parse(JSON.parse(outputText(run.originalOutput)) as unknown);
+      const modelPlan = JSON.parse(outputText(run.originalOutput)) as unknown;
+      if (!modelPlan || typeof modelPlan !== 'object' || Array.isArray(modelPlan))
+        throw new Error('Structured model output must be an object');
+      // These identity fields are application metadata. The model may repeat them in its
+      // response for schema compliance, but it cannot choose what is recorded or reported.
+      const parsed = planSchema.parse({
+        ...modelPlan,
+        model: this.model,
+        promptVersion: PROMPT_VERSION,
+      });
       for (const c of [...parsed.candidates, ...(parsed.watchlist ?? [])])
         for (const source of c.sources) {
           if (!citationIds.has(citationIdentity(source.url)))
@@ -221,6 +231,7 @@ export class OpenAiTradingBrain implements TradingBrain {
             c.uncertainties.push('Source page contents at cutoff are not independently verified');
         }
       parsed.model = this.model;
+      parsed.promptVersion = PROMPT_VERSION;
       parsed.generatedAt = run.generatedAt;
       parsed.cutoffAt = context.session.cutoffAt;
       run.plan = validatePlan(parsed, context.session, run.generatedAt);
