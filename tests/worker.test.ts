@@ -84,12 +84,11 @@ it('allows the Finnhub stream to warm up at the opening bell without an outage e
   provider.getQuotes = async () => {
     throw new Error('stream-connecting');
   };
-  let worker: TradingWorker;
   const onePassClock: Clock = {
     now: () => clock.now(),
     sleep: async () => worker.shutdown(),
   };
-  worker = new TradingWorker(loadConfig({}), repo, onePassClock, calendar, provider, {
+  const worker = new TradingWorker(loadConfig({}), repo, onePassClock, calendar, provider, {
     publish: async () => undefined,
   });
   await worker.run();

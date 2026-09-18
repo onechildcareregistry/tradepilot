@@ -103,9 +103,9 @@ export class TradingWorker {
                 entity: 'OperationalEvent',
                 id: `data:${minute}`,
                 at,
-                  payload: {
-                    type: 'data-unavailable',
-                    message,
+                payload: {
+                  type: 'data-unavailable',
+                  message,
                 },
               });
               if (!s.outbox.some((x) => x.id === `data-failure:${session.date}`))
@@ -159,7 +159,18 @@ export class TradingWorker {
           // Persistence errors escape this loop. They are not treated as recoverable data outages.
           for (const quote of quotes) await engine.process({ type: 'quote', quote });
           for (const bar of bars) await engine.process({ type: 'bar', bar });
-          if (fetchedBars) lastMinute = at.slice(0, 16);
+          if (fetchedBars) {
+            lastMinute = at.slice(0, 16);
+            if (this.data.diagnostics)
+              await this.repo.transact((_s, audit) => {
+                audit.push({
+                  entity: 'OperationalEvent',
+                  id: `feed-diagnostics:${lastMinute}`,
+                  at,
+                  payload: this.data.diagnostics?.(),
+                });
+              }, this.owner);
+          }
         }
         await engine.process({ type: 'clock', at: this.clock.now().toISOString() });
         state = await this.repo.read();

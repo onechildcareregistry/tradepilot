@@ -75,7 +75,7 @@ function outputText(raw: unknown): string {
 }
 function sourceUrls(value: unknown, result = new Set<string>()): Set<string> {
   if (typeof value === 'string') {
-    for (const match of value.matchAll(/https?:\/\/[^\s"'<>\]\[)}]+/g)) {
+    for (const match of value.matchAll(/https?:\/\/[^\s"'<>\][)}]+/g)) {
       try {
         result.add(new URL(match[0]).toString());
       } catch {

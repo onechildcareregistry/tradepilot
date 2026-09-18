@@ -40,6 +40,9 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
   private nextConnectAt = 0;
   private failures = 0;
   private issue = 'stream-connecting';
+  private receivedTrades: Record<string, number> = {};
+  private rejectedTrades: Record<string, number> = {};
+  private acceptedTrades: Record<string, number> = {};
   constructor(
     private key: string,
     private clock: Clock,
@@ -102,8 +105,12 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
         if (message.type !== 'trade') return;
         for (const trade of message.data.sort((a, b) => a.t - b.t)) {
           if (!this.symbols.includes(trade.s)) continue;
+          this.receivedTrades[trade.s] = (this.receivedTrades[trade.s] ?? 0) + 1;
           const age = this.lastMessageAt - trade.t;
-          if (age < 0 || age > 15000) continue;
+          if (age < 0 || age > 15000) {
+            this.rejectedTrades[trade.s] = (this.rejectedTrades[trade.s] ?? 0) + 1;
+            continue;
+          }
           const timestamp = new Date(trade.t).toISOString();
           const previous = this.latest.get(trade.s);
           // Without an exchange trade ID, identical timestamps are conservatively coalesced.
@@ -117,6 +124,7 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
             coverage: this.coverage,
           };
           this.latest.set(trade.s, quote);
+          this.acceptedTrades[trade.s] = (this.acceptedTrades[trade.s] ?? 0) + 1;
           this.bars.observe(quote);
           this.queue.push(quote);
           this.failures = 0;
@@ -144,6 +152,21 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
       return !q || this.clock.now().getTime() - Date.parse(q.timestamp) > 15000;
     });
     return missing.length ? `partial-or-stale-data:${missing.join(',')}` : undefined;
+  }
+  diagnostics(): unknown {
+    return {
+      source: this.source,
+      connected: this.socket?.readyState === 1,
+      issue: this.issue || null,
+      lastMessageAt: this.lastMessageAt ? new Date(this.lastMessageAt).toISOString() : null,
+      symbols: this.symbols.map((symbol) => ({
+        symbol,
+        receivedTrades: this.receivedTrades[symbol] ?? 0,
+        rejectedTimestampTrades: this.rejectedTrades[symbol] ?? 0,
+        acceptedTrades: this.acceptedTrades[symbol] ?? 0,
+        lastAcceptedAt: this.latest.get(symbol)?.timestamp ?? null,
+      })),
+    };
   }
   async getQuotes(symbols: string[]): Promise<Quote[]> {
     this.connect(symbols);

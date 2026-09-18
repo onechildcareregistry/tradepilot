@@ -25,7 +25,7 @@ interface EmailCandidate {
 }
 function candidates(text: string): EmailCandidate[] {
   const headings = [
-    ...text.matchAll(/^(\d+)\. ([A-Z][A-Z.\-]+)\s*(?:—|:)\s*Explosion (\d+); Entry quality (\d+)/gm),
+    ...text.matchAll(/^(\d+)\. ([A-Z][A-Z.-]+)\s*(?:—|:)\s*Explosion (\d+); Entry quality (\d+)/gm),
   ];
   return headings.map((heading, index) => {
     const start = (heading.index ?? 0) + heading[0].length;

@@ -2,6 +2,7 @@ import type { Bar, Quote } from '../domain/models.js';
 export interface MarketDataProvider {
   readonly transport?: 'stream' | 'poll';
   health?(symbols: string[]): string | undefined;
+  diagnostics?(): unknown;
   close?(): void;
   readonly source: string;
   readonly coverage: string;

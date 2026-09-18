@@ -12,6 +12,8 @@ import { samplePlan } from '../src/demo.js';
 import { MemoryRepository } from '../src/persistence/Repository.js';
 import { MorningResearchJob } from '../src/jobs/MorningResearchJob.js';
 import { MockTradingBrain } from '../src/brain/MockTradingBrain.js';
+import { TradingEngine } from '../src/worker/TradingEngine.js';
+import { loadConfig } from '../src/config.js';
 import {
   flushNotifications,
   ResendNotificationService,
@@ -69,9 +71,23 @@ describe('read-only provider adapters', () => {
       }),
     );
     await clock.sleep(30_000);
-    expect(await provider.getBars(['AAPL', 'MSFT'], at, clock.now().toISOString())).toMatchObject([
+    const completed = await provider.getBars(['AAPL', 'MSFT'], at, clock.now().toISOString());
+    expect(completed).toMatchObject([
       { symbol: 'AAPL', open: '100.25', high: '101', low: '100.25', close: '101' },
     ]);
+    const repository = new MemoryRepository();
+    const engine = new TradingEngine(repository, loadConfig({}));
+    const session = new UsTradingCalendar().session('2026-09-17');
+    if (!session) throw new Error('Missing session');
+    await engine.start(session);
+    for (const bar of completed) await engine.process({ type: 'bar', bar });
+    expect(await repository.records('MarketDataSnapshot')).toMatchObject([
+      { id: `bar:AAPL:${at}`, payload: { type: 'bar', bar: { close: '101' } } },
+    ]);
+    expect(provider.diagnostics()).toMatchObject({
+      connected: true,
+      symbols: [{ symbol: 'AAPL', receivedTrades: 2, acceptedTrades: 2 }],
+    });
     first.emit('close');
     await clock.sleep(1000);
     await expect(provider.getQuotes(['AAPL'])).rejects.toThrow('stream-disconnected');
@@ -312,17 +328,21 @@ describe('research and notifications', () => {
     empty.candidates = [];
     const repo = new MemoryRepository();
     const clock = new MockClock(new Date(empty.generatedAt));
-    const job = new MorningResearchJob(new MockTradingBrain(empty), repo, clock, { eligible: async () => true });
+    const job = new MorningResearchJob(new MockTradingBrain(empty), repo, clock, {
+      eligible: async () => true,
+    });
     expect(await job.run(session, true)).toBe('skipped');
     expect(await job.run(session)).toBe('failed');
     expect(Object.keys((await repo.read()).plans)).toHaveLength(0);
     expect(await job.run(session)).toBe('skipped');
-    const good = new MorningResearchJob(new MockTradingBrain(samplePlan(session)), repo, clock, { eligible: async () => true });
+    const good = new MorningResearchJob(new MockTradingBrain(samplePlan(session)), repo, clock, {
+      eligible: async () => true,
+    });
     expect(await good.run(session, true)).toBe('approved');
     expect(await good.run(session, true)).toBe('skipped');
     const state = await repo.read();
-    expect(state.outbox.some(x => x.id === 'research-failed:2026-09-18')).toBe(true);
-    expect(state.outbox.some(x => x.id === 'research-start:2026-09-18:recovery')).toBe(true);
+    expect(state.outbox.some((x) => x.id === 'research-failed:2026-09-18')).toBe(true);
+    expect(state.outbox.some((x) => x.id === 'research-start:2026-09-18:recovery')).toBe(true);
     clock.set(session.open);
     expect(await good.run(session, true)).toBe('skipped');
   });
