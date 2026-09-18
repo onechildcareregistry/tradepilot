@@ -258,7 +258,10 @@ export class TradingEngine {
           ? event.bar.symbol
           : undefined;
     if (!symbol) return;
-    const c = s.plans[session.date]?.candidates.find((x) => x.symbol === symbol);
+    const plan = s.plans[session.date];
+    const c = [...(plan?.candidates ?? []), ...(plan?.watchlist ?? [])].find(
+      (candidate) => candidate.symbol === symbol,
+    );
     if (!c) return;
     const key = `${session.date}:${symbol}`,
       at =

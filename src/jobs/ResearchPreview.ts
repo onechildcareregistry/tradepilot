@@ -18,6 +18,10 @@ export async function researchPreview(
     for (const candidate of run.plan.candidates)
       if (await listings.eligible(candidate.symbol, candidate.exchange)) eligible.push(candidate);
     run.plan.candidates = eligible.map((candidate, index) => ({ ...candidate, rank: index + 1 }));
+    const watchlist = [];
+    for (const candidate of run.plan.watchlist)
+      if (await listings.eligible(candidate.symbol, candidate.exchange)) watchlist.push(candidate);
+    run.plan.watchlist = watchlist.map((candidate, index) => ({ ...candidate, rank: index + 4 }));
     if (!run.plan.candidates.length)
       throw new Error('No eligible verified Nasdaq/NYSE common stocks');
     run.plan = validatePlan(run.plan, session, clock.now().toISOString());
@@ -49,6 +53,9 @@ export function previewEmailText(run: BrainRun, date: string): string {
         (candidate) =>
           `${candidate.rank}. ${candidate.symbol} — Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nCatalyst: ${candidate.catalyst}\nPreview trigger: ${candidate.triggerPrice}; invalidation: ${candidate.stopConcept}; suggested target: ${candidate.initialTarget}\nSources: ${candidate.sources.map((source) => source.url).join(', ')}`,
       )
-      .join('\n\n')
+      .join('\n\n') +
+      (run.plan.watchlist.length
+        ? `\n\nEvaluation watchlist (${run.plan.watchlist.length}; tracked only):\n${run.plan.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol} — ${candidate.watchReason}`).join('\n')}`
+        : '')
   );
 }

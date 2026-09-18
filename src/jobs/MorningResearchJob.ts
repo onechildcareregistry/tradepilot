@@ -46,6 +46,10 @@ export class MorningResearchJob {
         for (const c of run.plan.candidates)
           if (await this.listings.eligible(c.symbol, c.exchange)) eligible.push(c);
         run.plan.candidates = eligible.map((c, i) => ({ ...c, rank: i + 1 }));
+        const watchlist = [];
+        for (const candidate of run.plan.watchlist)
+          if (await this.listings.eligible(candidate.symbol, candidate.exchange)) watchlist.push(candidate);
+        run.plan.watchlist = watchlist.map((candidate, index) => ({ ...candidate, rank: index + 4 }));
         if (!run.plan.candidates.length)
           throw new Error('No eligible verified Nasdaq/NYSE common stocks');
         validatePlan(run.plan, session, this.clock.now().toISOString());
@@ -75,7 +79,10 @@ export class MorningResearchJob {
                 (c) =>
                   `${c.rank}. ${c.symbol}: Explosion ${c.explosionScore}; Entry quality ${c.entryQuality}\nCatalyst: ${c.catalyst}\nBrain trigger ${c.triggerPrice}; invalidation: ${c.stopConcept}; suggested target ${c.initialTarget}\nExecution: opening-range stop, 2R target. Risks: ${c.uncertainties.join('; ')}\nSources: ${c.sources.map((x) => x.url).join(', ')}`,
               )
-              .join('\n\n'),
+              .join('\n\n') +
+            (p.watchlist.length
+              ? `\n\nEvaluation watchlist (${p.watchlist.length}; tracked only, never traded):\n${p.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol} — ${candidate.watchReason}`).join('\n')}`
+              : ''),
           sentAt: null,
           attempts: 0,
         });

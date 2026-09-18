@@ -270,6 +270,25 @@ describe('plans and end-to-end reports', () => {
     expect(JSON.stringify(r)).not.toContain('sources');
     expect(r.reportHistory).toHaveLength(1);
   });
+  it('tracks watchlist candidates without allowing them to create entry signals', async () => {
+    const s = opened();
+    const plan = s.plans[session().date];
+    if (!plan) throw new Error('Missing plan');
+    const recommended = plan.candidates[0];
+    if (!recommended) throw new Error('Missing recommended candidate');
+    plan.watchlist = [
+      {
+        ...recommended,
+        rank: 4,
+        symbol: 'WATCH',
+        watchReason: 'Runner-up for evaluation only',
+      },
+    ];
+    const repo = new MemoryRepository(s);
+    const engine = new TradingEngine(repo, config);
+    await engine.process({ type: 'bar', bar: bar(session().open, '101', 'WATCH') });
+    expect((await repo.read()).signals.some((signal) => signal.symbol === 'WATCH')).toBe(false);
+  });
 });
 
 it('normalizes offset timestamps before enforcing the research cutoff', () => {

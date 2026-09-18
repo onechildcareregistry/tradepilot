@@ -50,6 +50,9 @@ export const candidateSchema = z
     uncertainties: z.array(z.string()),
   })
   .strict();
+export const watchlistCandidateSchema = candidateSchema
+  .extend({ rank: z.number().int().min(4).max(15), watchReason: z.string().min(1) })
+  .strict();
 export const planSchema = z
   .object({
     tradingDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -61,10 +64,12 @@ export const planSchema = z
     expiresAt: timestamp,
     marketRegime: z.string(),
     candidates: z.array(candidateSchema).min(1).max(3),
+    watchlist: z.array(watchlistCandidateSchema).max(12).default([]),
   })
   .strict();
 export type TradingPlan = z.infer<typeof planSchema>;
 export type Candidate = z.infer<typeof candidateSchema>;
+export type WatchlistCandidate = z.infer<typeof watchlistCandidateSchema>;
 export interface Quote {
   symbol: string;
   bid?: string;

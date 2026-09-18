@@ -1,4 +1,4 @@
-import { planSchema, type TradingPlan, type Session } from '../domain/models.js';
+import { planSchema, type TradingPlan, type Session, type Candidate } from '../domain/models.js';
 import { D } from '../domain/money.js';
 export function validatePlan(input: unknown, session: Session, now: string): TradingPlan {
   const plan = planSchema.parse(input);
@@ -13,6 +13,13 @@ export function validatePlan(input: unknown, session: Session, now: string): Tra
     if (symbols.has(c.symbol) || c.rank !== index + 1)
       throw new Error('Duplicate symbol or non-contiguous ranking');
     symbols.add(c.symbol);
+  }
+  for (const [index, c] of plan.watchlist.entries()) {
+    if (symbols.has(c.symbol) || c.rank !== index + 4)
+      throw new Error('Duplicate symbol or non-contiguous watchlist ranking');
+    symbols.add(c.symbol);
+  }
+  for (const c of [...plan.candidates, ...plan.watchlist] as Candidate[]) {
     if (D(c.initialTarget).lte(c.triggerPrice)) throw new Error('Target must exceed trigger');
     for (const source of c.sources) {
       if (source.publishedAt && source.publishedAt > session.cutoffAt)

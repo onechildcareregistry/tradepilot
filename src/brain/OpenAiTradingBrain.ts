@@ -166,7 +166,7 @@ export class OpenAiTradingBrain implements TradingBrain {
       run.originalResearch = await request({
         model: this.model,
         instructions: prompt,
-        input: `Research date ${context.session.date}. Information cutoff ${context.session.cutoffAt}. Current retrieval time ${startedAt}. Find up to 3 qualified candidates with citations.`,
+        input: `Research date ${context.session.date}. Information cutoff ${context.session.cutoffAt}. Current retrieval time ${startedAt}. Return up to 3 qualified execution candidates and up to 12 cited runner-ups for the evaluation watchlist.`,
         tools: [{ type: 'web_search' }],
         tool_choice: 'required',
         include: ['web_search_call.action.sources'],
@@ -199,7 +199,7 @@ export class OpenAiTradingBrain implements TradingBrain {
       });
       run.generatedAt = this.clock.now().toISOString();
       const parsed = planSchema.parse(JSON.parse(outputText(run.originalOutput)) as unknown);
-      for (const c of parsed.candidates)
+      for (const c of [...parsed.candidates, ...parsed.watchlist])
         for (const source of c.sources) {
           if (!citationIds.has(citationIdentity(source.url)))
             throw new Error('Plan cites a URL not retrieved during research');

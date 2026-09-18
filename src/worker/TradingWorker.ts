@@ -62,6 +62,7 @@ export class TradingWorker {
         const symbols = [
           ...new Set([
             ...(state.plans[session.date]?.candidates.map((x) => x.symbol) ?? []),
+            ...(state.plans[session.date]?.watchlist.map((x) => x.symbol) ?? []),
             ...Object.keys(state.positions),
           ]),
         ];
