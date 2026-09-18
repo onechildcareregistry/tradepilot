@@ -12,22 +12,50 @@ function escapeHtml(value: string): string {
   );
 }
 
+function reportSections(text: string): { portfolioValue: string; reportedAt: string; sections: string[] } {
+  const match = text.match(
+    /^Current simulated portfolio value: USD ([^\n]+)\nAs of: ([^\n]+)\n\n([\s\S]*)$/,
+  );
+  const body = match?.[3] ?? text;
+  return {
+    portfolioValue: match?.[1] ?? 'Unavailable',
+    reportedAt: match?.[2] ?? 'Unavailable',
+    sections: body.split(/\n(?=\d+\. [A-Z][A-Z.\-]+:)/).filter(Boolean),
+  };
+}
+
+function sectionHtml(section: string): string {
+  const [heading = '', ...details] = section.split('\n');
+  const candidate = heading.match(/^(\d+\. [A-Z][A-Z.\-]+): (.*)$/);
+  if (!candidate)
+    return `<section style="margin:20px 0;padding:18px 20px;background:#f5f7fa;border-radius:4px;color:#4c5b70;font-size:15px;line-height:1.65">${escapeHtml(section).replace(/\n/g, '<br>')}</section>`;
+  return `<section style="padding:24px 0;border-top:1px solid #dde3eb">
+    <div style="font-size:22px;line-height:1.25;font-weight:700;color:#182235">${escapeHtml(candidate[1] ?? '')} <span style="font-size:14px;color:#158060">${escapeHtml(candidate[2] ?? '')}</span></div>
+    <div style="margin-top:12px;color:#4c5b70;font-size:15px;line-height:1.65">${escapeHtml(details.join('\n')).replace(/\n/g, '<br>')}</div>
+  </section>`;
+}
+
 function emailHtml(item: OutboxItem): string {
   const preview = /preview/i.test(item.subject) || /PREVIEW ONLY/.test(item.text);
   const status = preview ? 'Research preview' : 'Morning research report';
+  const report = reportSections(item.text);
   return `<!doctype html>
-<html><body style="margin:0;background:#f3f6fb;font-family:Arial,sans-serif;color:#172033">
-  <main style="max-width:680px;margin:32px auto;background:#ffffff;border-radius:16px;overflow:hidden;border:1px solid #dfe6f2">
-    <header style="padding:28px 32px;background:#102a43;color:#ffffff">
-      <div style="font-size:28px;font-weight:700;letter-spacing:-.5px">TradePilot</div>
-      <div style="margin-top:6px;font-size:14px;color:#cbd9e8">Simulation-only U.S. equity research</div>
+<html><body style="margin:0;background:#f3f5f8;font-family:Arial,Helvetica,sans-serif;color:#182235">
+  <main style="max-width:680px;margin:32px auto;background:#ffffff;overflow:hidden">
+    <header style="padding:34px 40px;background:#172238;color:#ffffff">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.6px;color:#b7c3d6;text-transform:uppercase">${status}</div>
+      <div style="margin-top:12px;font-size:31px;line-height:1.15;font-weight:700">TradePilot</div>
+      <div style="margin-top:10px;font-size:16px;line-height:1.4;color:#d4dcea">${escapeHtml(item.subject)}</div>
     </header>
-    <section style="padding:28px 32px">
-      <div style="display:inline-block;padding:6px 10px;border-radius:999px;background:${preview ? '#fff4d6' : '#e2f4ea'};color:${preview ? '#7a4b00' : '#17643d'};font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.4px">${status}</div>
-      <h1 style="margin:18px 0 8px;font-size:22px;line-height:1.3">${escapeHtml(item.subject)}</h1>
-      <div style="margin-top:20px;padding:20px;background:#f7f9fc;border-radius:10px;white-space:pre-wrap;font-size:15px;line-height:1.6">${escapeHtml(item.text)}</div>
+    <section style="padding:32px 40px">
+      <div style="font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6e7d92">Portfolio snapshot</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:16px;background:#f4f6f9">
+        <tr><td style="padding:20px 22px;width:50%;vertical-align:top"><div style="font-size:14px;color:#65748a">Portfolio value</div><div style="margin-top:7px;font-size:27px;font-weight:700;color:#182235">USD ${escapeHtml(report.portfolioValue)}</div></td><td style="padding:20px 22px;vertical-align:top"><div style="font-size:14px;color:#65748a">Report time</div><div style="margin-top:8px;font-size:14px;font-weight:700;line-height:1.45;color:#182235">${escapeHtml(report.reportedAt)}</div></td></tr>
+      </table>
+      <div style="margin-top:32px;font-size:13px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#6e7d92">Today's research</div>
+      <div style="margin-top:16px">${report.sections.map(sectionHtml).join('')}</div>
     </section>
-    <footer style="padding:18px 32px;border-top:1px solid #dfe6f2;color:#5c6b7d;font-size:12px;line-height:1.5">Simulation only. This report is not investment advice and does not establish profitability.</footer>
+    <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55">Simulation only. This report is not investment advice and does not establish profitability.</footer>
   </main>
 </body></html>`;
 }
