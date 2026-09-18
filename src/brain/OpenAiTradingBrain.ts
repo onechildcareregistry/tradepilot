@@ -73,7 +73,15 @@ function outputText(raw: unknown): string {
   return text;
 }
 function sourceUrls(value: unknown, result = new Set<string>()): Set<string> {
-  if (Array.isArray(value)) for (const item of value) sourceUrls(item, result);
+  if (typeof value === 'string') {
+    for (const match of value.matchAll(/https?:\/\/[^\s"'<>\]\[)}]+/g)) {
+      try {
+        result.add(new URL(match[0]).toString());
+      } catch {
+        /* Ignore malformed text that resembles a URL. */
+      }
+    }
+  } else if (Array.isArray(value)) for (const item of value) sourceUrls(item, result);
   else if (value && typeof value === 'object')
     for (const [k, v] of Object.entries(value)) {
       if (k === 'url' && typeof v === 'string') result.add(v);
@@ -199,7 +207,7 @@ export class OpenAiTradingBrain implements TradingBrain {
       });
       run.generatedAt = this.clock.now().toISOString();
       const parsed = planSchema.parse(JSON.parse(outputText(run.originalOutput)) as unknown);
-      for (const c of [...parsed.candidates, ...parsed.watchlist])
+      for (const c of [...parsed.candidates, ...(parsed.watchlist ?? [])])
         for (const source of c.sources) {
           if (!citationIds.has(citationIdentity(source.url)))
             throw new Error('Plan cites a URL not retrieved during research');

@@ -47,7 +47,7 @@ export class MorningResearchJob {
           if (await this.listings.eligible(c.symbol, c.exchange)) eligible.push(c);
         run.plan.candidates = eligible.map((c, i) => ({ ...c, rank: i + 1 }));
         const watchlist = [];
-        for (const candidate of run.plan.watchlist)
+        for (const candidate of run.plan.watchlist ?? [])
           if (await this.listings.eligible(candidate.symbol, candidate.exchange)) watchlist.push(candidate);
         run.plan.watchlist = watchlist.map((candidate, index) => ({ ...candidate, rank: index + 4 }));
         if (!run.plan.candidates.length)
@@ -81,7 +81,7 @@ export class MorningResearchJob {
               )
               .join('\n\n') +
             (p.watchlist.length
-              ? `\n\nEvaluation watchlist (${p.watchlist.length}; tracked only, never traded):\n${p.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol} — ${candidate.watchReason}`).join('\n')}`
+              ? `\n\nEvaluation watchlist (${p.watchlist.length}; tracked only, never traded):\n${p.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol}: Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nWhy tracked: ${candidate.watchReason}\nCatalyst: ${candidate.catalyst}`).join('\n\n')}`
               : ''),
           sentAt: null,
           attempts: 0,

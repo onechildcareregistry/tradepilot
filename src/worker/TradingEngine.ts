@@ -270,7 +270,7 @@ export class TradingEngine {
       date: session.date,
       symbol,
       rank: c.rank,
-      setupType: c.setupType,
+      setupType: 'opening_range_breakout',
       explosionScore: c.explosionScore,
       entryQuality: c.entryQuality,
       exhaustionScore: c.premarket.exhaustionScore,

@@ -51,6 +51,7 @@ export const candidateSchema = z
   })
   .strict();
 export const watchlistCandidateSchema = candidateSchema
+  .omit({ triggerPrice: true, stopConcept: true, initialTarget: true, maximumAllocation: true })
   .extend({ rank: z.number().int().min(4).max(15), watchReason: z.string().min(1) })
   .strict();
 export const planSchema = z
@@ -64,7 +65,7 @@ export const planSchema = z
     expiresAt: timestamp,
     marketRegime: z.string(),
     candidates: z.array(candidateSchema).min(1).max(3),
-    watchlist: z.array(watchlistCandidateSchema).max(12).default([]),
+    watchlist: z.array(watchlistCandidateSchema).max(12),
   })
   .strict();
 export type TradingPlan = z.infer<typeof planSchema>;
