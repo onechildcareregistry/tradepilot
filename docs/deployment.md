@@ -30,7 +30,7 @@ Record outputs for SQL server, managed identity principal ID, Key Vault, Static 
 
 ## 3. Bootstrap the database and secrets
 
-Authenticate with the configured SQL administrator via `az login`. Add a temporary SQL firewall rule for your local public IP if needed, then set `SQL_SERVER`, `SQL_DATABASE`, and `RUNTIME_PRINCIPAL_ID` locally. Run:
+Authenticate with the configured SQL administrator via `az login`. Add a temporary SQL firewall rule for your local public IP if needed, then set `SQL_SERVER`, `SQL_DATABASE`, `RUNTIME_PRINCIPAL_ID`, and `RUNTIME_CLIENT_ID` locally. Run:
 
 ```bash
 npx tsx scripts/bootstrap-sql.ts
