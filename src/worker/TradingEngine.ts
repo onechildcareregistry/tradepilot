@@ -73,6 +73,9 @@ export class TradingEngine {
               : event.at,
         session = s.session;
       if (!session) return;
+      const decisionsBefore = s.decisions.length,
+        executionsBefore = s.executions.length,
+        positionsBefore = JSON.stringify(s.positions);
       if (event.type === 'quote') {
         const q = event.quote;
         if (
@@ -85,12 +88,6 @@ export class TradingEngine {
         const previous = s.quotes[q.symbol];
         if (previous && q.timestamp <= previous.timestamp) return;
         s.quotes[q.symbol] = q;
-        audit.push({
-          entity: 'MarketDataSnapshot',
-          id: `quote:${q.symbol}:${q.timestamp}`,
-          at,
-          payload: event,
-        });
       } else if (event.type === 'bar') {
         const b = event.bar;
         if (
@@ -163,6 +160,28 @@ export class TradingEngine {
         event,
         signals.some((x) => x.side === 'buy'),
       );
+      if (event.type === 'quote') {
+        const quoteChangedDecision = s.decisions.length > decisionsBefore;
+        const quoteChangedExecution = s.executions.length > executionsBefore;
+        const quoteChangedPosition = JSON.stringify(s.positions) !== positionsBefore;
+        if (quoteChangedDecision || quoteChangedExecution || quoteChangedPosition)
+          audit.push({
+            entity: 'MarketDataSnapshot',
+            id: `decision-price:${event.quote.symbol}:${event.quote.timestamp}`,
+            at,
+            payload: event,
+          });
+      }
+      if (event.type === 'bar') {
+        const outcome = s.outcomes[`${session.date}:${event.bar.symbol}`];
+        if (outcome)
+          audit.push({
+            entity: 'CandidateOutcome',
+            id: `${session.date}:${event.bar.symbol}:${event.bar.start}`,
+            at,
+            payload: outcome,
+          });
+      }
       const updated = portfolio(s, at),
         last = s.snapshots.at(-1);
       s.maximumDrawdown = amount(
@@ -215,12 +234,18 @@ export class TradingEngine {
           }
         }
       }
-      audit.push({
-        entity: 'SessionCheckpoint',
-        id: `${session.date}:${at}:${event.type}:${event.type === 'quote' ? event.quote.symbol : event.type === 'bar' ? event.bar.symbol : ''}`,
-        at,
-        payload: { status: record?.status, openPositions: Object.keys(s.positions).length },
-      });
+      const checkpointNeeded =
+        event.type !== 'quote' ||
+        s.decisions.length > decisionsBefore ||
+        s.executions.length > executionsBefore ||
+        JSON.stringify(s.positions) !== positionsBefore;
+      if (checkpointNeeded)
+        audit.push({
+          entity: 'SessionCheckpoint',
+          id: `${session.date}:${at}:${event.type}:${event.type === 'quote' ? event.quote.symbol : event.type === 'bar' ? event.bar.symbol : ''}`,
+          at,
+          payload: { status: record?.status, openPositions: Object.keys(s.positions).length },
+        });
     }, this.owner);
   }
   private outcomes(s: State, event: MarketEvent, triggered: boolean): void {

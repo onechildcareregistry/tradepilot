@@ -65,14 +65,6 @@ export function projections(before: State, after: State): AuditRecord[] {
         new Date().toISOString(),
         p,
       );
-  for (const [key, o] of Object.entries(after.outcomes))
-    if (JSON.stringify(o) !== JSON.stringify(before.outcomes[key]))
-      add(
-        'CandidateOutcome',
-        `${key}:${o.observations}:${o.triggered}:${o.stopAt}:${o.moveAt}`,
-        new Date().toISOString(),
-        o,
-      );
   for (const item of after.outbox)
     if (JSON.stringify(item) !== JSON.stringify(before.outbox.find((x) => x.id === item.id)))
       add(

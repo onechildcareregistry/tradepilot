@@ -6,7 +6,7 @@ import { TradingWorker } from '../src/worker/TradingWorker.js';
 import { TradingEngine } from '../src/worker/TradingEngine.js';
 import { MockMarketDataProvider } from '../src/market-data/MockMarketDataProvider.js';
 import { loadConfig } from '../src/config.js';
-import { samplePlan, quote } from '../src/demo.js';
+import { bar, samplePlan, quote } from '../src/demo.js';
 import type { PublicReport } from '../src/reporting/PublicReport.js';
 import type { Clock } from '../src/domain/Clock.js';
 const calendar = new UsTradingCalendar();
@@ -39,7 +39,7 @@ it('worker publishes observation-only state and releases its lease on shutdown',
     repo,
     clock,
     calendar,
-    new MockMarketDataProvider([quote(at)]),
+    new MockMarketDataProvider([quote(at)], [bar('2026-09-17T13:30:00.000Z')]),
     {
       publish: async (r) => {
         report = r;
@@ -96,7 +96,7 @@ it('a persistence error terminates processing rather than being swallowed as a f
     repo,
     oneIterationClock(() => worker.shutdown()),
     calendar,
-    new MockMarketDataProvider([quote(at)]),
+    new MockMarketDataProvider([quote(at)], [bar('2026-09-17T13:30:00.000Z')]),
     { publish: async () => undefined },
   );
   await expect(worker.run()).rejects.toThrow('durability lost');
@@ -166,4 +166,5 @@ it('persists last-price-only observations without creating fills', async () => {
   expect(state.quotes[last.symbol]?.lastPrice).toBe(last.lastPrice);
   expect(state.quotes[last.symbol]?.bid).toBeUndefined();
   expect(state.executions).toHaveLength(0);
+  expect(await repo.records('MarketDataSnapshot')).toHaveLength(0);
 });
