@@ -113,6 +113,9 @@ function App() {
         <a className="nav" href="#performance">
           <span>⌁</span> Performance
         </a>
+        <a className="nav" href="#reports">
+          <span>▤</span> Reports
+        </a>
         <a className="nav" href="#method">
           <span>ⓘ</span> Method & coverage
         </a>
@@ -281,6 +284,47 @@ function App() {
               ))}
             </div>
           </article>
+        </section>
+        <section className="panel reports" id="reports">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">DAILY RESEARCH</span>
+              <h2>Report history</h2>
+            </div>
+            <span className="legend">Approved reports · latest 30</span>
+          </div>
+          {report?.reportHistory.length ? (
+            <div className="report-list">
+              {report.reportHistory.map((entry) => (
+                <article className="report-card" key={`${entry.date}:${entry.generatedAt}`}>
+                  <div className="report-card-header">
+                    <div>
+                      <strong>{entry.date}</strong>
+                      <small>{new Date(entry.generatedAt).toLocaleString()}</small>
+                    </div>
+                    <span className="table-status">{entry.marketRegime}</span>
+                  </div>
+                  <div className="candidate-list">
+                    {entry.candidates.map((candidate) => (
+                      <div className="report-candidate" key={`${entry.date}:${candidate.symbol}`}>
+                        <span className="rank">{candidate.rank}</span>
+                        <div>
+                          <strong>{candidate.symbol}</strong>
+                          <p>{candidate.catalyst}</p>
+                          <small>
+                            Explosion {candidate.explosionScore} · Entry quality{' '}
+                            {candidate.entryQuality} · Trigger {usd(candidate.trigger)}
+                          </small>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </article>
+              ))}
+            </div>
+          ) : (
+            <p className="muted">Approved daily reports will appear here after the first run.</p>
+          )}
         </section>
         <section className="method" id="method">
           <div>

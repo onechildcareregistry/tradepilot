@@ -6,9 +6,28 @@ const num = z.number().finite();
 const group = z
   .object({ label: z.string(), tradeCount: z.number().int(), winRate: num.nullable(), pnl: num })
   .strict();
+const reportHistoryItem = z
+  .object({
+    date: z.string(),
+    generatedAt: z.string().datetime(),
+    marketRegime: z.string(),
+    candidates: z.array(
+      z
+        .object({
+          rank: z.number().int(),
+          symbol: z.string(),
+          explosionScore: num,
+          entryQuality: num,
+          catalyst: z.string(),
+          trigger: num,
+        })
+        .strict(),
+    ),
+  })
+  .strict();
 export const publicReportSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     generatedAt: z.string().datetime(),
     mode: z.literal('Monopoly'),
     fixture: z.boolean(),
@@ -36,6 +55,7 @@ export const publicReportSchema = z
     ),
     bySetup: z.array(group),
     byRank: z.array(group),
+    reportHistory: z.array(reportHistoryItem),
   })
   .strict();
 export type PublicReport = z.infer<typeof publicReportSchema>;
@@ -50,7 +70,7 @@ export function publicReport(s: State, at: string, fixture = false): PublicRepor
       pnl: x.pnl,
     }));
   return publicReportSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: at,
     mode: 'Monopoly',
     fixture,
@@ -83,5 +103,21 @@ export function publicReport(s: State, at: string, fixture = false): PublicRepor
     })),
     bySetup: groups(p.bySetup),
     byRank: groups(p.byRank),
+    reportHistory: Object.values(s.plans)
+      .sort((a, b) => b.generatedAt.localeCompare(a.generatedAt))
+      .slice(0, 30)
+      .map((plan) => ({
+        date: plan.tradingDate,
+        generatedAt: plan.generatedAt,
+        marketRegime: plan.marketRegime,
+        candidates: plan.candidates.map((candidate) => ({
+          rank: candidate.rank,
+          symbol: candidate.symbol,
+          explosionScore: candidate.explosionScore,
+          entryQuality: candidate.entryQuality,
+          catalyst: candidate.catalyst,
+          trigger: Number(candidate.triggerPrice),
+        })),
+      })),
   });
 }

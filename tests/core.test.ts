@@ -251,7 +251,8 @@ describe('plans and end-to-end reports', () => {
     expect(first.metrics.tradeCount).toBe(1);
     expect(first.metrics.equity).toBe(5021.5883);
     expect(first.status).toBe('closed');
-    expect(JSON.stringify(first)).not.toMatch(/DEMO|entryPrice|catalyst|apiKey/);
+    expect(JSON.stringify(first)).not.toMatch(/entryPrice|sources|apiKey/);
+    expect(first.reportHistory[0]?.candidates[0]?.symbol).toBe('DEMO');
     expect(() => publicReportSchema.parse({ ...first, quotes: [] })).toThrow();
     const state = await a.read();
     expect(D(state.cash).eq(state.ledger.reduce((sum, x) => sum.add(x.amount), D(0)))).toBe(true);
@@ -261,11 +262,13 @@ describe('plans and end-to-end reports', () => {
     await new TradingEngine(repo, config).process({ type: 'clock', at: session().close });
     expect(Object.keys((await repo.read()).positions)).toEqual(['DEMO']);
   });
-  it('does not expose research or prices through public report', () => {
+  it('exposes approved report summaries without evidence or execution prices', () => {
     const s = opened();
     const r = publicReport(s, at);
     expect(Object.keys(r)).not.toContain('plans');
     expect(JSON.stringify(r)).not.toContain('triggerPrice');
+    expect(JSON.stringify(r)).not.toContain('sources');
+    expect(r.reportHistory).toHaveLength(1);
   });
 });
 

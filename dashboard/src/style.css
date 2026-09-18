@@ -285,6 +285,64 @@ h2 {
   gap: 22px;
   margin: 23px 0;
 }
+.reports {
+  margin: 23px 0;
+}
+.report-list {
+  display: grid;
+  gap: 14px;
+}
+.report-card {
+  border-top: 1px solid #26363c;
+  padding-top: 17px;
+}
+.report-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 16px;
+}
+.report-card-header strong {
+  display: block;
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+}
+.report-card-header small {
+  display: block;
+  color: #77939b;
+  font-size: 10px;
+  margin-top: 5px;
+}
+.candidate-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 15px;
+}
+.report-candidate {
+  display: flex;
+  gap: 12px;
+  padding: 13px;
+  background: #142126;
+  border-radius: 6px;
+}
+.report-candidate > div {
+  min-width: 0;
+}
+.report-candidate strong {
+  font-size: 12px;
+  font-weight: 600;
+}
+.report-candidate p {
+  color: #b3c2c7;
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 6px 0;
+}
+.report-candidate small {
+  color: #79949c;
+  font-size: 10px;
+}
 table {
   width: 100%;
   border-collapse: collapse;
