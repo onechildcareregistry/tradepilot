@@ -23,6 +23,8 @@
     "infra:check": "az bicep build --file infra/main.bicep --stdout > /dev/null",
     "schema": "tsx scripts/generate-schema.ts",
     "configure:azure-openai": "tsx scripts/configure-azure-openai.ts",
+    "configure:deployment": "tsx scripts/create-deployment-parameters.ts",
+    "configure:azure-runtime": "tsx scripts/configure-azure-runtime.ts",
     "format": "prettier --write src tests scripts dashboard/src dashboard/index.html docs README.md",
     "format:check": "prettier --check src tests scripts dashboard/src dashboard/index.html docs README.md",
     "test:sql": "SQL_LOCAL_TEST=true vitest run tests/persistence.test.ts"

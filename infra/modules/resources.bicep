@@ -160,8 +160,8 @@ var commonEnv = [
   { name: 'RESEARCH_HOUR', value: string(researchHour) }
   { name: 'RESEARCH_MINUTE', value: string(researchMinute) }
   { name: 'TRADEPILOT_MODE', value: 'Monopoly' }
-  { name: 'TRADING_ENABLED', value: string(tradingEnabled) }
-  { name: 'DATA_VERIFIED', value: string(dataVerified) }
+  { name: 'TRADING_ENABLED', value: toLower(string(tradingEnabled)) }
+  { name: 'DATA_VERIFIED', value: toLower(string(dataVerified)) }
   { name: 'DATABASE', value: 'azure-sql' }
   { name: 'SQL_SERVER', value: server.properties.fullyQualifiedDomainName }
   { name: 'SQL_DATABASE', value: database.name }
