@@ -51,6 +51,8 @@ function reportData(text: string) {
     cash: match?.[2] ?? 'Unavailable', positions: match?.[3] ?? 'None', reportedAt: match?.[4] ?? 'Unavailable',
     regime: body.match(/(?:Market )?[Rr]egime: ([^\n]+)/)?.[1] ?? null,
     regimeScore: body.match(/Market regime score: (\d+)\/100/)?.[1] ?? null,
+    brain: body.match(/Brain: ([^\n·]+) · Model: ([^\n]+)/),
+    usage: body.match(/Usage: ([^\n]+)/)?.[1] ?? null,
     recommendations: candidates(primary).filter((candidate) => Number(candidate.rank) <= 3),
     watchlist: candidates(watch),
   };
@@ -85,7 +87,7 @@ function emailHtml(item: OutboxItem): string {
       <div style="margin-top:10px">${report.recommendations.length ? report.recommendations.map((candidate) => candidateHtml(candidate, true)).join('') : '<p style="color:#607087">No validated execution candidate.</p>'}</div>
       ${report.watchlist.length ? `<div style="margin-top:30px;font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#7b8798">Evaluation watchlist · tracked only, never traded</div>${report.watchlist.map((candidate) => candidateHtml(candidate, false)).join('')}` : ''}
     </section>
-    <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55">Simulation only. This report is not investment advice and does not establish profitability.</footer>
+    <footer style="padding:20px 40px;background:#f4f6f9;color:#718096;font-size:12px;line-height:1.55"><div><b>Brain:</b> ${report.brain ? `${escapeHtml(report.brain[1] ?? 'unavailable')} · <b>Model:</b> ${escapeHtml(report.brain[2] ?? 'unavailable')}` : 'Unavailable'}</div>${report.usage ? `<div style="margin-top:5px"><b>Usage:</b> ${escapeHtml(report.usage)}</div>` : ''}<div style="margin-top:10px">Simulation only. This report is not investment advice and does not establish profitability.</div></footer>
   </main>
 </body></html>`;
 }

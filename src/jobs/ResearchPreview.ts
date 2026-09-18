@@ -43,7 +43,7 @@ export function previewEmailText(run: BrainRun, date: string): string {
     usage?.totalTokens === null || usage?.totalTokens === undefined
       ? 'unavailable'
       : `${usage.totalTokens} total tokens (${usage.inputTokens ?? 'unknown'} input, ${usage.outputTokens ?? 'unknown'} output, ${usage.reasoningTokens ?? 'unknown'} reasoning)`;
-  const header = `RESEARCH PREVIEW ONLY — ${date}\nThis was generated before the official 06:15 America/Vancouver cutoff. It is not an approved trading plan, cannot enable execution, and must not be used for orders.\n\nUsage: ${usageText}.\n`;
+  const header = `RESEARCH PREVIEW ONLY — ${date}\nThis was generated before the official 06:15 America/Vancouver cutoff. It is not an approved trading plan, cannot enable execution, and must not be used for orders.\n`;
   if (!run.plan)
     return `${header}\nNo validated preview was produced.\nValidation: ${run.validationErrors.join('; ') || 'unknown failure'}`;
   return (
@@ -56,6 +56,7 @@ export function previewEmailText(run: BrainRun, date: string): string {
       .join('\n\n') +
       (run.plan.watchlist.length
         ? `\n\nEvaluation watchlist (${run.plan.watchlist.length}; tracked only):\n${run.plan.watchlist.map((candidate) => `${candidate.rank}. ${candidate.symbol}: Explosion ${candidate.explosionScore}; Entry quality ${candidate.entryQuality}\nWhy tracked: ${candidate.watchReason}\nCatalyst: ${candidate.catalyst}`).join('\n\n')}`
-        : '')
+        : '') +
+      `\n\nBrain: ${run.plan.brainVersion} · Model: ${run.plan.model}\nUsage: ${usageText}.`
   );
 }
