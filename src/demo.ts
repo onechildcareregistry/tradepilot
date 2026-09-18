@@ -18,6 +18,7 @@ export function samplePlan(session: Session): TradingPlan {
     cutoffAt: session.cutoffAt,
     expiresAt: session.entryDeadline,
     marketRegime: 'Synthetic fixture; not a market assessment',
+    marketRegimeScore: 50,
     watchlist: [],
     candidates: [
       {

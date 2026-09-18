@@ -302,7 +302,9 @@ function App() {
                       <strong>{entry.date}</strong>
                       <small>{new Date(entry.generatedAt).toLocaleString()}</small>
                     </div>
-                    <span className="table-status">{entry.marketRegime}</span>
+                    <span className="table-status">
+                      {entry.marketRegime} · {entry.marketRegimeScore}/100
+                    </span>
                   </div>
                   <div className="candidate-list">
                     {entry.candidates.map((candidate) => (

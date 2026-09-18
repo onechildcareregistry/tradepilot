@@ -150,6 +150,15 @@ async function main(): Promise<void> {
         preview,
         '5000',
       );
+      if (run.validationStatus !== 'valid' || !run.plan) {
+        await repo.transact((_state, audit) => {
+          audit.push({ entity: 'BrainRun', id: run.id, at: run.generatedAt, payload: run });
+        });
+        console.log(
+          JSON.stringify({ status: run.validationStatus, previewDate: preview.date, usage: run.usage }),
+        );
+        return;
+      }
       const item = {
         id: `research-preview:${preview.date}:${run.id}`,
         subject: `TradePilot TEST — research preview for ${preview.date}`,

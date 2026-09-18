@@ -11,6 +11,7 @@ const reportHistoryItem = z
     date: z.string(),
     generatedAt: z.string().datetime(),
     marketRegime: z.string(),
+    marketRegimeScore: num,
     candidates: z.array(
       z
         .object({
@@ -110,6 +111,7 @@ export function publicReport(s: State, at: string, fixture = false): PublicRepor
         date: plan.tradingDate,
         generatedAt: plan.generatedAt,
         marketRegime: plan.marketRegime,
+        marketRegimeScore: plan.marketRegimeScore,
         candidates: plan.candidates.map((candidate) => ({
           rank: candidate.rank,
           symbol: candidate.symbol,

@@ -73,7 +73,7 @@ export class MorningResearchJob {
           id: `research:${session.date}`,
           subject: `TradePilot research — ${session.date}`,
           text:
-            `SIMULATION ONLY | Starting equity: USD ${portfolio(s, now).equity}\nRegime: ${p.marketRegime}\nStatus: validated plan; execution remains subject to configuration and risk checks.\nUsage: ${usage?.totalTokens === null || usage?.totalTokens === undefined ? 'unavailable' : `${usage.totalTokens} total tokens`} (${usage?.inputTokens ?? 'unknown'} input, ${usage?.outputTokens ?? 'unknown'} output, ${usage?.reasoningTokens ?? 'unknown'} reasoning).\n` +
+            `SIMULATION ONLY | Starting equity: USD ${portfolio(s, now).equity}\nRegime: ${p.marketRegime}\nMarket regime score: ${p.marketRegimeScore}/100\nStatus: validated plan; execution remains subject to configuration and risk checks.\nUsage: ${usage?.totalTokens === null || usage?.totalTokens === undefined ? 'unavailable' : `${usage.totalTokens} total tokens`} (${usage?.inputTokens ?? 'unknown'} input, ${usage?.outputTokens ?? 'unknown'} output, ${usage?.reasoningTokens ?? 'unknown'} reasoning).\n` +
             p.candidates
               .map(
                 (c) =>

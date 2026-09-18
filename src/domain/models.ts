@@ -64,6 +64,7 @@ export const planSchema = z
     cutoffAt: timestamp,
     expiresAt: timestamp,
     marketRegime: z.string(),
+    marketRegimeScore: z.number().min(0).max(100),
     candidates: z.array(candidateSchema).min(1).max(3),
     watchlist: z.array(watchlistCandidateSchema).max(12),
   })

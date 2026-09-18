@@ -47,7 +47,7 @@ export function previewEmailText(run: BrainRun, date: string): string {
   if (!run.plan)
     return `${header}\nNo validated preview was produced.\nValidation: ${run.validationErrors.join('; ') || 'unknown failure'}`;
   return (
-    `${header}\nCandidate review:\n` +
+    `${header}\nMarket regime: ${run.plan.marketRegime}\nMarket regime score: ${run.plan.marketRegimeScore}/100\n\nCandidate review:\n` +
     run.plan.candidates
       .map(
         (candidate) =>

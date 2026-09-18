@@ -32,6 +32,11 @@
     "marketRegime": {
       "type": "string"
     },
+    "marketRegimeScore": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    },
     "candidates": {
       "type": "array",
       "items": {
@@ -259,6 +264,218 @@
       },
       "minItems": 1,
       "maxItems": 3
+    },
+    "watchlist": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "rank": {
+            "type": "integer",
+            "minimum": 4,
+            "maximum": 15
+          },
+          "symbol": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9.-]{0,9}$"
+          },
+          "company": {
+            "type": "string",
+            "minLength": 1
+          },
+          "exchange": {
+            "type": "string",
+            "enum": [
+              "NASDAQ",
+              "NYSE"
+            ]
+          },
+          "securityType": {
+            "type": "string",
+            "const": "common_stock"
+          },
+          "explosionScore": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "entryQuality": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+          },
+          "catalyst": {
+            "type": "string"
+          },
+          "catalystSignificance": {
+            "type": "string"
+          },
+          "premarket": {
+            "type": "object",
+            "properties": {
+              "price": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\d+(\\.\\d+)?$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "changePercent": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "volume": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "exhaustionScore": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 100
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "price",
+              "changePercent",
+              "volume",
+              "exhaustionScore"
+            ],
+            "additionalProperties": false
+          },
+          "marketCap": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\d+(\\.\\d+)?$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "floatShares": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "setupType": {
+            "type": "string",
+            "const": "opening_range_breakout"
+          },
+          "reasoning": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "url": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "publishedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "retrievedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "cutoffVerified": {
+                  "type": "boolean"
+                },
+                "excerpt": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "url",
+                "title",
+                "publishedAt",
+                "retrievedAt",
+                "cutoffVerified",
+                "excerpt"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "uncertainties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "watchReason": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "required": [
+          "rank",
+          "symbol",
+          "company",
+          "exchange",
+          "securityType",
+          "explosionScore",
+          "entryQuality",
+          "catalyst",
+          "catalystSignificance",
+          "premarket",
+          "marketCap",
+          "floatShares",
+          "setupType",
+          "reasoning",
+          "sources",
+          "confidence",
+          "uncertainties",
+          "watchReason"
+        ],
+        "additionalProperties": false
+      },
+      "maxItems": 12
     }
   },
   "required": [
@@ -270,7 +487,9 @@
     "cutoffAt",
     "expiresAt",
     "marketRegime",
-    "candidates"
+    "marketRegimeScore",
+    "candidates",
+    "watchlist"
   ],
   "additionalProperties": false,
   "$schema": "http://json-schema.org/draft-07/schema#"
