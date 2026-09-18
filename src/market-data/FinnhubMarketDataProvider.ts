@@ -139,12 +139,11 @@ export class FinnhubMarketDataProvider implements MarketDataProvider {
   health(symbols: string[]): string | undefined {
     if (!this.socket || this.socket.readyState !== 1 || this.issue)
       return this.issue || 'stream-disconnected';
-    return symbols.every((symbol) => {
+    const missing = symbols.filter((symbol) => {
       const q = this.latest.get(symbol);
-      return q && this.clock.now().getTime() - Date.parse(q.timestamp) <= 15000;
-    })
-      ? undefined
-      : 'partial-or-stale-data';
+      return !q || this.clock.now().getTime() - Date.parse(q.timestamp) > 15000;
+    });
+    return missing.length ? `partial-or-stale-data:${missing.join(',')}` : undefined;
   }
   async getQuotes(symbols: string[]): Promise<Quote[]> {
     this.connect(symbols);

@@ -66,11 +66,14 @@ export class TradingWorker {
             ...Object.keys(state.positions),
           ]),
         ];
-        if (symbols.length && (at >= session.open || this.data.transport === 'stream')) {
+        // Do not open the Finnhub socket in premarket. The plan is already available, but
+        // there cannot be a regular-session trade observation until the session opens.
+        if (symbols.length && at >= session.open) {
           let quotes: Quote[] = [];
           let bars: Bar[] = [];
           let fetchedBars = false;
           let failed = false;
+          let warmingUp = false;
           try {
             quotes = await this.data.getQuotes(symbols);
             const minute = at.slice(0, 16);
@@ -82,7 +85,16 @@ export class TradingWorker {
             }
           } catch (error) {
             failed = true;
+            const message = error instanceof Error ? error.message : 'Failure';
+            const openingGraceEnds = new Date(Date.parse(session.open) + 60_000).toISOString();
+            // A websocket needs a short, bounded warm-up at the opening bell. Treating this
+            // expected handshake as an outage caused the premature interruption email.
+            warmingUp =
+              at < openingGraceEnds &&
+              /^(stream-connecting|stream-connection-failed|stream-disconnected)$/.test(message);
+            if (warmingUp) failed = false;
             await this.repo.transact((s, audit) => {
+              if (warmingUp) return;
               const minute = at.slice(0, 16);
               s.dataIssue = 'data-unavailable';
               for (const order of s.orders)
@@ -91,9 +103,9 @@ export class TradingWorker {
                 entity: 'OperationalEvent',
                 id: `data:${minute}`,
                 at,
-                payload: {
-                  type: 'data-unavailable',
-                  message: error instanceof Error ? error.message : 'Failure',
+                  payload: {
+                    type: 'data-unavailable',
+                    message,
                 },
               });
               if (!s.outbox.some((x) => x.id === `data-failure:${session.date}`))
@@ -106,7 +118,7 @@ export class TradingWorker {
                 });
             }, this.owner);
           }
-          if (!failed) {
+          if (!failed && !warmingUp) {
             const freshSymbols = new Set(
               quotes
                 .filter(
@@ -138,7 +150,7 @@ export class TradingWorker {
                   s.outbox.push({
                     id: `data-stale:${session.date}`,
                     subject: 'TradePilot market-data check failed',
-                    text: 'No fresh Finnhub prices were received for the planned symbols one minute after the U.S. market opened. New simulated entries are blocked for this session until valid observations return.',
+                    text: `No fresh Finnhub prices were received for ${issue.replace(/^partial-or-stale-data:?/, '').trim() || 'one or more planned symbols'} one minute after the U.S. market opened. New simulated entries are blocked for this session until valid observations return.`,
                     sentAt: null,
                     attempts: 0,
                   });

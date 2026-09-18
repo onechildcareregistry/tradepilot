@@ -75,6 +75,26 @@ it('data outage is reported without losing state or fabricating fills', async ()
   expect((await repo.read()).cash).toBe('5000');
   expect((await repo.read()).outbox.some((x) => x.id === 'data-failure:2026-09-17')).toBe(true);
 });
+it('allows the Finnhub stream to warm up at the opening bell without an outage email', async () => {
+  const repo = await repoWithPlan();
+  const session = calendar.session('2026-09-17');
+  if (!session) throw new Error('No session');
+  const clock = new MockClock(new Date(session.open));
+  const provider = new MockMarketDataProvider();
+  provider.getQuotes = async () => {
+    throw new Error('stream-connecting');
+  };
+  let worker: TradingWorker;
+  const onePassClock: Clock = {
+    now: () => clock.now(),
+    sleep: async () => worker.shutdown(),
+  };
+  worker = new TradingWorker(loadConfig({}), repo, onePassClock, calendar, provider, {
+    publish: async () => undefined,
+  });
+  await worker.run();
+  expect((await repo.read()).outbox.some((x) => x.id === 'data-failure:2026-09-17')).toBe(false);
+});
 it('a persistence error terminates processing rather than being swallowed as a feed outage', async () => {
   class FailingRepository extends MemoryRepository {
     override async transact<T>(fn: Mutation<T>, owner?: string): Promise<T> {

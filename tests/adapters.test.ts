@@ -59,6 +59,7 @@ describe('read-only provider adapters', () => {
     expect(await provider.getQuotes(['AAPL'])).toMatchObject([
       { symbol: 'AAPL', lastPrice: '100.25' },
     ]);
+    expect(provider.health?.(['AAPL', 'MSFT'])).toBe('partial-or-stale-data:MSFT');
     first.emit('close');
     await clock.sleep(1000);
     await expect(provider.getQuotes(['AAPL'])).rejects.toThrow('stream-disconnected');
