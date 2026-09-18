@@ -128,15 +128,13 @@ async function main(): Promise<void> {
       });
       console.log(JSON.stringify(result, null, 2));
       if (!result.ok) process.exitCode = 1;
-    } else if (command === 'research') {
+    } else if (command === 'research' || command === 'research-recover') {
       if (!session) return;
-      console.log(
-        await new MorningResearchJob(brain(), repo, clock, new NasdaqListingDirectory()).run(
-          session,
-        ),
-      );
+      const result = await new MorningResearchJob(brain(), repo, clock, new NasdaqListingDirectory()).run(session, command === 'research-recover');
+      console.log(result);
       if (notifications)
         await flushNotifications(repo, notifications, () => clock.now().toISOString());
+      if (result === 'failed') process.exitCode = 1;
     } else if (command === 'research-preview') {
       if (!notifications) throw new Error('Resend notification configuration is required');
       const preview = previewSession(calendar, clock.now().toISOString());

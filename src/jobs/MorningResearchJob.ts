@@ -13,14 +13,17 @@ export class MorningResearchJob {
     private clock: Clock,
     private listings: ListingDirectory,
   ) {}
-  async run(session: Session): Promise<'skipped' | 'approved' | 'failed'> {
+  async run(session: Session, recovery = false): Promise<'skipped' | 'approved' | 'failed'> {
     const now = this.clock.now().toISOString();
     if (now < session.cutoffAt || now >= session.open) return 'skipped';
+    const suffix = recovery ? ':recovery' : '';
     const claim = await this.repo.transact((s, audit) => {
-      if (s.plans[session.date] || s.outbox.some((x) => x.id === `research-start:${session.date}`))
+      if (recovery && !s.outbox.some((x) => x.id === `research-failed:${session.date}`))
+        return false;
+      if (s.plans[session.date] || s.outbox.some((x) => x.id === `research-start:${session.date}${suffix}`))
         return false;
       s.outbox.push({
-        id: `research-start:${session.date}`,
+        id: `research-start:${session.date}${suffix}`,
         subject: 'internal-claim',
         text: 'Research job claimed',
         sentAt: now,
@@ -28,7 +31,7 @@ export class MorningResearchJob {
       });
       audit.push({
         entity: 'OperationalEvent',
-        id: `research-start:${session.date}`,
+        id: `research-start:${session.date}${suffix}`,
         at: now,
         payload: { status: 'started' },
       });
@@ -86,7 +89,7 @@ export class MorningResearchJob {
         });
       } else {
         s.outbox.push({
-          id: `research-failed:${session.date}`,
+          id: `research-failed:${session.date}${suffix}`,
           subject: `TradePilot no-trade research status — ${session.date}`,
           text:
             run.validationErrors.join('; ') ||

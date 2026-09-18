@@ -262,7 +262,6 @@
         ],
         "additionalProperties": false
       },
-      "minItems": 1,
       "maxItems": 3
     },
     "watchlist": {
