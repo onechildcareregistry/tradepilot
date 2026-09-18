@@ -19,7 +19,7 @@ import { OpenAiTradingBrain, azureResponsesApi } from './brain/OpenAiTradingBrai
 import type { BrainRun } from './brain/TradingBrain.js';
 import { planSchema } from './domain/models.js';
 import { MorningResearchJob } from './jobs/MorningResearchJob.js';
-import { previewEmailText, researchPreview } from './jobs/ResearchPreview.js';
+import { previewEmailText, previewSession, researchPreview } from './jobs/ResearchPreview.js';
 import {
   ResendNotificationService,
   flushNotifications,
@@ -139,17 +139,7 @@ async function main(): Promise<void> {
         await flushNotifications(repo, notifications, () => clock.now().toISOString());
     } else if (command === 'research-preview') {
       if (!notifications) throw new Error('Resend notification configuration is required');
-      let previewSession: typeof session = null;
-      for (let day = 1; day <= 7 && !previewSession; day++) {
-        const date = new Date(
-          Date.parse(`${calendar.date(clock.now().toISOString())}T12:00:00Z`) + day * 86400000,
-        )
-          .toISOString()
-          .slice(0, 10);
-        previewSession = calendar.session(date);
-      }
-      if (!previewSession) throw new Error('No upcoming reviewed trading session');
-      const preview = { ...previewSession, cutoffAt: clock.now().toISOString() };
+      const preview = previewSession(calendar, clock.now().toISOString());
       const run = await researchPreview(
         brain(),
         new NasdaqListingDirectory(),
