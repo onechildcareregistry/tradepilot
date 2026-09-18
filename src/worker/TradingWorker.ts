@@ -129,6 +129,18 @@ export class TradingWorker {
                   for (const order of s.orders)
                     if (order.side === 'buy' && order.status === 'pending')
                       order.status = 'canceled';
+                if (
+                  issue &&
+                  at >= new Date(new Date(session.open).getTime() + 60_000).toISOString() &&
+                  !s.outbox.some((x) => x.id === `data-stale:${session.date}`)
+                )
+                  s.outbox.push({
+                    id: `data-stale:${session.date}`,
+                    subject: 'TradePilot market-data check failed',
+                    text: 'No fresh Finnhub prices were received for the planned symbols one minute after the U.S. market opened. New simulated entries are blocked for this session until valid observations return.',
+                    sentAt: null,
+                    attempts: 0,
+                  });
               }, this.owner);
           }
           // Persistence errors escape this loop. They are not treated as recoverable data outages.
