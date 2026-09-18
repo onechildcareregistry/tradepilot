@@ -174,7 +174,7 @@ export class OpenAiTradingBrain implements TradingBrain {
       run.originalResearch = await request({
         model: this.model,
         instructions: prompt,
-        input: `Research date ${context.session.date}. Information cutoff ${context.session.cutoffAt}. Current retrieval time ${startedAt}. Return up to 3 qualified execution candidates and up to 12 cited runner-ups for the evaluation watchlist.`,
+        input: `Research date ${context.session.date}. Information cutoff ${context.session.cutoffAt}. Current retrieval time ${startedAt}. Aim for exactly 3 qualified primary recommendations plus 12 distinct cited others considered (15 unique stocks). Expand screening before returning fewer. Explain any shortfall and preserve all supported names in the structured plan. Do not invent unsupported candidates to meet the target.`,
         tools: [{ type: 'web_search' }],
         tool_choice: 'required',
         include: ['web_search_call.action.sources'],
