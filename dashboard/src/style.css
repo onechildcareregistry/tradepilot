@@ -67,6 +67,37 @@ summary:focus-visible {
 .history-chart-heading h3 {
   margin: 0;
 }
+.interactive-price-chart {
+  position: relative;
+}
+.price-chart {
+  cursor: crosshair;
+  touch-action: none;
+}
+.chart-tooltip,
+.chart-selection {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.chart-tooltip {
+  color: #dce8eb;
+}
+.chart-tooltip span {
+  color: #91a7ae;
+}
+.chart-selection {
+  color: #91a7ae;
+  margin-top: 4px;
+}
+.chart-selection.positive strong {
+  color: #8be2c1;
+}
+.chart-selection.negative strong {
+  color: #f0a298;
+}
 .history-brief {
   margin-top: 28px;
   padding-top: 24px;
