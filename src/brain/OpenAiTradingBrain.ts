@@ -217,6 +217,17 @@ export class OpenAiTradingBrain implements TradingBrain {
         model: this.model,
         promptVersion: PROMPT_VERSION,
       });
+      // Ranking is presentation metadata, not model evidence. Reassign it from the
+      // validated array order so a duplicate or skipped rank cannot discard an otherwise
+      // valid plan. Duplicate symbols remain rejected by validatePlan below.
+      parsed.candidates = parsed.candidates.map((candidate, index) => ({
+        ...candidate,
+        rank: index + 1,
+      }));
+      parsed.watchlist = parsed.watchlist.map((candidate, index) => ({
+        ...candidate,
+        rank: index + 4,
+      }));
       for (const c of [...parsed.candidates, ...(parsed.watchlist ?? [])])
         for (const source of c.sources) {
           if (!citationIds.has(citationIdentity(source.url)))
