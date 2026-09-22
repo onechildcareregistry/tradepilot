@@ -321,7 +321,7 @@ describe('research and notifications', () => {
     expect(id).toBe('daily');
     expect((await repo.read()).outbox[0]?.sentAt).toBe(at);
   });
-  it('allows empty research safely and one audited pre-open recovery only', async () => {
+  it('saves an evidence-limited research run as a no-trade plan', async () => {
     const session = new UsTradingCalendar().session('2026-09-18');
     if (!session) throw new Error('No session');
     const empty = samplePlan(session);
@@ -332,19 +332,15 @@ describe('research and notifications', () => {
       eligible: async () => true,
     });
     expect(await job.run(session, true)).toBe('skipped');
-    expect(await job.run(session)).toBe('failed');
-    expect(Object.keys((await repo.read()).plans)).toHaveLength(0);
+    expect(await job.run(session)).toBe('approved');
+    const emptyState = await repo.read();
+    expect(emptyState.plans[session.date]?.candidates).toHaveLength(0);
+    expect(emptyState.outbox.some((x) => x.id === `research:${session.date}`)).toBe(true);
     expect(await job.run(session)).toBe('skipped');
-    const good = new MorningResearchJob(new MockTradingBrain(samplePlan(session)), repo, clock, {
-      eligible: async () => true,
-    });
-    expect(await good.run(session, true)).toBe('approved');
-    expect(await good.run(session, true)).toBe('skipped');
     const state = await repo.read();
-    expect(state.outbox.some((x) => x.id === 'research-failed:2026-09-18')).toBe(true);
-    expect(state.outbox.some((x) => x.id === 'research-start:2026-09-18:recovery')).toBe(true);
+    expect(state.outbox.some((x) => x.id === 'research-failed:2026-09-18')).toBe(false);
     clock.set(session.open);
-    expect(await good.run(session, true)).toBe('skipped');
+    expect(await job.run(session, true)).toBe('skipped');
   });
   it('includes the current simulated portfolio value in every delivered report', async () => {
     const repo = new MemoryRepository();

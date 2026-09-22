@@ -20,7 +20,10 @@ export class MorningResearchJob {
     const claim = await this.repo.transact((s, audit) => {
       if (recovery && !s.outbox.some((x) => x.id === `research-failed:${session.date}`))
         return false;
-      if (s.plans[session.date] || s.outbox.some((x) => x.id === `research-start:${session.date}${suffix}`))
+      if (
+        s.plans[session.date] ||
+        s.outbox.some((x) => x.id === `research-start:${session.date}${suffix}`)
+      )
         return false;
       s.outbox.push({
         id: `research-start:${session.date}${suffix}`,
@@ -52,10 +55,12 @@ export class MorningResearchJob {
         run.plan.candidates = eligible.map((c, i) => ({ ...c, rank: i + 1 }));
         const watchlist = [];
         for (const candidate of run.plan.watchlist ?? [])
-          if (await this.listings.eligible(candidate.symbol, candidate.exchange)) watchlist.push(candidate);
-        run.plan.watchlist = watchlist.map((candidate, index) => ({ ...candidate, rank: index + 4 }));
-        if (!run.plan.candidates.length)
-          throw new Error('No eligible verified Nasdaq/NYSE common stocks');
+          if (await this.listings.eligible(candidate.symbol, candidate.exchange))
+            watchlist.push(candidate);
+        run.plan.watchlist = watchlist.map((candidate, index) => ({
+          ...candidate,
+          rank: index + 4,
+        }));
         validatePlan(run.plan, session, this.clock.now().toISOString());
       }
     } catch (e) {

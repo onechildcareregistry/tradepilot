@@ -195,7 +195,7 @@ export class TradingEngine {
           for (const o of s.orders) if (o.status === 'pending') o.status = 'canceled';
           record.status = Object.keys(s.positions).length
             ? 'unresolved'
-            : s.plans[session.date]
+            : s.plans[session.date]?.candidates.length
               ? 'closed'
               : 'no-trade';
           record.endingEquity = updated.equity;
@@ -218,7 +218,7 @@ export class TradingEngine {
             ? 'unresolved'
             : !plan
               ? 'no-trade'
-              : this.c.TRADING_ENABLED
+              : this.c.TRADING_ENABLED && plan.candidates.length
                 ? 'trading'
                 : 'observing';
           if (!plan) {
